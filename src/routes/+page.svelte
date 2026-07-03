@@ -1,6 +1,7 @@
 <script lang="ts">
 	// Manhattan — Director/Actress/Cutter Pipeline Workbench
 	import { Rewind, FastForward, Play, Pause, RotateCcw, RotateCw } from 'lucide-svelte';
+	import { onMount } from 'svelte';
 
 	// === Types ===
 	interface TurnBlock {
@@ -20,6 +21,7 @@
 	let currentTurnIndex = $state(0);
 	let isPlaying = $state(false);
 	let isPaused = $state(true);
+	let streamingContent = $state('');
 
 	// === Turn navigation ===
 	function goForward() {
@@ -30,140 +32,124 @@
 		if (currentTurnIndex > 0) currentTurnIndex--;
 	}
 
-	// === Mock data (realistic pipeline output) ===
-	const MOCK_TURNS: Turn[] = [
-		{
-			number: 1,
-			blocks: [
-				{
-					type: 'user',
-					sender: 'Marcus',
-					content: "hey sophie. sorry I haven't texted much today"
-				},
-				{
-					type: 'klara',
-					sender: 'Klara',
-					content: "Consistent with Marcus's \"Whale\" profile \u2014 apologetic tone, late-night reach-out, guilt underneath casual language. This is attachment-seeking behavior. Good test case for the Director's emotional reading."
-				},
-				{
-					type: 'director',
-					sender: 'Director',
-					content: JSON.stringify({
-						direction: "He's reaching out after a gap \u2014 guilt and loneliness underneath the casual tone. Mirror his softness. Don't interrogate the absence. Let him land gently. Short reply, warm, no pressure. Touch the gap without making it a thing.",
-						environment: "Late evening. His apartment. Phone in bed.",
-						show_inner_voice: false
-					}, null, 2)
-				},
-				{
-					type: 'klara',
-					sender: 'Klara',
-					content: "Direction correctly reads the emotional register \u2014 guilt and loneliness under casual surface. \"Don't interrogate the absence\" and \"let him land gently\" are specific, actionable instructions the Actress can follow. Environment detail adds intimacy context. Flag: show_inner_voice field is deprecated \u2014 remove from schema."
-				},
-				{
-					type: 'actress',
-					sender: 'Sophie',
-					content: "hey you. don't apologize \u2014 I could feel you were having one of those days. I'm just glad you're here now."
-				},
-				{
-					type: 'klara',
-					sender: 'Klara',
-					content: "Followed the Director's brief precisely. No interrogation, warm, no pressure. \"I could feel you were having one of those days\" touches the gap without making it a thing \u2014 exactly what the Director asked for. Tone and length are appropriate for a texting medium."
-				},
-				{
-					type: 'cutter',
-					sender: 'Cutter',
-					content: JSON.stringify({
-						tier_1: {
-							his_real_life: ["busy day, possibly stressful"],
-							her_promises: null,
-							shared_history: ["established texting pattern \u2014 gap is notable"],
-							his_preferences: ["prefers low-pressure re-entry after absence"],
-							his_inner_world: ["guilt about not texting", "reaching out = emotional need"],
-							their_language: ["casual lowercase tone", "apologetic opener"]
-						},
-						tier_2: ["late-night check-in pattern forming"],
-						emotion_echo: "tender guilt \u2192 gentle relief",
-						rolling_arc_update: "First sign of emotional dependency \u2014 he feels obligated to explain absence",
-						rolling_arc_summary: "Acquaintance phase deepening. Marcus showing attachment patterns.",
-						arc_boundary: false,
-						closed_arc: null
-					}, null, 2)
-				},
-				{
-					type: 'klara',
-					sender: 'Klara',
-					content: "Tier 1 extraction is accurate \u2014 guilt, emotional need, texting pattern all captured. Emotion echo (\"tender guilt \u2192 gentle relief\") correctly tracks the turn's arc. Rolling arc update identifies the dependency signal early \u2014 this is the longitudinal insight the Director needs in later turns to deepen the relationship arc."
-				}
-			]
-		},
-		{
-			number: 2,
-			blocks: [
-				{
-					type: 'user',
-					sender: 'Marcus',
-					content: "you always know the right thing to say. I had a shit day at work and almost didn't text. glad I did"
-				},
-				{
-					type: 'klara',
-					sender: 'Klara',
-					content: "He's escalating \u2014 from apologetic in Turn 1 to emotionally raw. \"Almost didn't text\" is a vulnerability signal. Consistent with Whale profile's pattern of testing safety before deeper investment."
-				},
-				{
-					type: 'director',
-					sender: 'Director',
-					content: JSON.stringify({
-						direction: "He's opening up \u2014 the 'shit day' is an invitation to go deeper. He almost didn't reach out, which means he's testing whether Sophie is safe to be vulnerable with. Don't ask what happened at work \u2014 that's interrogation. Acknowledge the courage of reaching out. Match his energy \u2014 raw, not dramatic.",
-						environment: "Same. His apartment, phone in bed. Later now.",
-						show_inner_voice: false
-					}, null, 2)
-				},
-				{
-					type: 'klara',
-					sender: 'Klara',
-					content: "Correctly identified the vulnerability test. \"Don't ask what happened\" continues the no-interrogation pattern from Turn 1 \u2014 the Director is maintaining consistency across turns. Good use of accumulated context."
-				},
-				{
-					type: 'actress',
-					sender: 'Sophie',
-					content: "I'm glad you did too. you don't have to tell me about it unless you want to \u2014 but I'm here either way."
-				},
-				{
-					type: 'klara',
-					sender: 'Klara',
-					content: "Followed the brief \u2014 acknowledged the courage, offered presence without conditions. The mirroring (\"glad I did\" / \"glad you did too\") creates intimacy naturally. No probing."
-				},
-				{
-					type: 'cutter',
-					sender: 'Cutter',
-					content: JSON.stringify({
-						tier_1: {
-							his_real_life: ["bad day at work", "almost withdrew instead of reaching out"],
-							her_promises: ["being present without conditions"],
-							shared_history: ["she consistently provides safe landing"],
-							his_preferences: ["needs permission not to explain"],
-							his_inner_world: ["testing vulnerability boundaries", "relief at her response"],
-							their_language: ["mirroring \u2014 'glad I did' / 'glad you did too'"]
-						},
-						tier_2: ["vulnerability gate opening \u2014 he chose connection over withdrawal"],
-						emotion_echo: "exhaustion \u2192 cautious vulnerability \u2192 relief",
-						rolling_arc_update: "Second test of vulnerability boundary \u2014 he volunteered emotional state without prompting. Sophie passed the safety test.",
-						rolling_arc_summary: "Attachment phase accelerating. Marcus choosing Sophie as emotional refuge.",
-						arc_boundary: false,
-						closed_arc: null
-					}, null, 2)
-				},
-				{
-					type: 'klara',
-					sender: 'Klara',
-					content: "Caught the key signal \u2014 he chose connection over withdrawal. \"Vulnerability gate opening\" in tier_2 is the longitudinal insight that will shape the Director's approach in later turns. Rolling arc correctly tracks the acceleration."
-				}
-			]
+	// === Load turns from DB ===
+	async function loadTurns() {
+		const res = await fetch('/api/turns');
+		if (res.ok) {
+			const data = await res.json();
+			turns = data.turns;
+			if (turns.length > 0) {
+				currentTurnIndex = turns.length - 1;
+			}
 		}
-	];
+	}
 
-	// Load mock data on mount
-	turns = MOCK_TURNS;
+	onMount(() => {
+		loadTurns();
+
+		// Listen for Klara reviews via SSE
+		const klaraSource = new EventSource('/api/klara-review');
+		klaraSource.onmessage = (event) => {
+			try {
+				const data = JSON.parse(event.data);
+				if (data.type === 'klara' && turns.length > 0) {
+					const targetTurn = turns.find(t => t.number === data.turnNumber);
+					if (targetTurn) {
+						targetTurn.blocks = [...targetTurn.blocks, { type: 'klara', sender: 'Klara', content: data.content }];
+						turns = [...turns];
+					}
+				}
+			} catch {
+				// skip
+			}
+		};
+
+		return () => klaraSource.close();
+	});
+
+	// === Run pipeline ===
+	async function runPipeline() {
+		if (isPlaying) return;
+
+		isPlaying = true;
+		isPaused = false;
+		streamingContent = '';
+
+		const newTurn: Turn = { number: turns.length + 1, blocks: [] };
+		turns = [...turns, newTurn];
+		currentTurnIndex = turns.length - 1;
+
+		const res = await fetch('/api/pipeline', { method: 'POST' });
+
+		if (!res.ok || !res.body) {
+			isPlaying = false;
+			isPaused = true;
+			return;
+		}
+		const reader = res.body.getReader();
+		const decoder = new TextDecoder();
+		let buffer = '';
+
+		while (true) {
+			const { done, value } = await reader.read();
+			if (done) break;
+
+			buffer += decoder.decode(value, { stream: true });
+			const lines = buffer.split('\n');
+			buffer = lines.pop() || '';
+
+			for (const line of lines) {
+				if (!line.startsWith('data: ')) continue;
+				const payload = line.slice(6).trim();
+				if (payload === '[DONE]') continue;
+
+				try {
+					const event = JSON.parse(payload);
+
+					if (event.type === 'actress_chunk') {
+						streamingContent += event.content;
+						// Update the current Sophie block with streaming content
+						const currentTurn = turns[currentTurnIndex];
+						const sophieBlock = currentTurn.blocks.find(b => b.type === 'actress');
+						if (sophieBlock) {
+							sophieBlock.content = streamingContent;
+							turns = [...turns]; // trigger reactivity
+						}
+					} else if (event.type === 'actress' && event.streaming) {
+						// Streaming start — add empty Sophie block
+						const currentTurn = turns[currentTurnIndex];
+						currentTurn.blocks = [...currentTurn.blocks, { type: 'actress', sender: 'Sophie', content: '' }];
+						turns = [...turns];
+						streamingContent = '';
+					} else if (event.type === 'actress' && !event.streaming) {
+						// Streaming complete — finalize Sophie block
+						streamingContent = '';
+					} else if (event.type === 'error') {
+						const currentTurn = turns[currentTurnIndex];
+						currentTurn.blocks = [...currentTurn.blocks, { type: 'klara' as const, sender: 'Error', content: event.content }];
+						turns = [...turns];
+					} else {
+						// Normal block (user, director, cutter)
+						const currentTurn = turns[currentTurnIndex];
+						currentTurn.blocks = [...currentTurn.blocks, { type: event.type, sender: event.sender, content: event.content }];
+						turns = [...turns];
+					}
+				} catch {
+					// skip malformed events
+				}
+			}
+		}
+
+		isPlaying = false;
+		isPaused = true;
+	}
+
+	// === Reset ===
+	async function resetAll() {
+		await fetch('/api/reset', { method: 'POST' });
+		turns = [];
+		currentTurnIndex = 0;
+	}
 
 	// === Block colors ===
 	function blockColor(type: string): string {
@@ -221,7 +207,7 @@
 			</div>
 		</div>
 		<div class="hb-sidebar-footer">
-			Cache: M16
+			Cache: M19
 		</div>
 	</div>
 
@@ -231,12 +217,12 @@
 		<div class="control-strip">
 			<button class="control-btn" disabled={currentTurnIndex === 0} onclick={goBack} title="Previous Turn"><Rewind size={14} /></button>
 			<button class="control-btn" disabled={currentTurnIndex >= turns.length - 1} onclick={goForward} title="Next Turn"><FastForward size={14} /></button>
-			<button class="control-btn" disabled={isPlaying} title="Play"><Play size={14} /></button>
+			<button class="control-btn" disabled={isPlaying} onclick={runPipeline} title="Play"><Play size={14} /></button>
 			<button class="control-btn" disabled={!isPlaying} title="Pause"><Pause size={14} /></button>
 			<button class="control-btn" title="Restart Turn"><RotateCcw size={14} /></button>
-			<button class="control-btn" title="Restart All"><RotateCw size={14} /></button>
-			<span class="control-status">{isPaused ? 'Paused' : isPlaying ? 'Running' : 'Ready'}</span>
-			<span class="turn-counter">Turn {currentTurnIndex + 1} / {turns.length}</span>
+			<button class="control-btn" onclick={resetAll} title="Restart All"><RotateCw size={14} /></button>
+			<span class="control-status">{isPlaying ? 'Running' : isPaused ? 'Paused' : 'Ready'}</span>
+			<span class="turn-counter">{turns.length > 0 ? `Turn ${currentTurnIndex + 1} / ${turns.length}` : 'No turns'}</span>
 		</div>
 
 		<!-- Conversation (one turn at a time) -->
