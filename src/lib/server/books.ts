@@ -1,15 +1,15 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-// Configurable path — update when Boss decides final destination
-const BOOKS_DIR = '/Users/deepak-macmini/honeybloom/recovery/cernere/quinn';
+const WIKI_DIR = '/Users/deepak-macmini/honeybloom/library/wiki';
 
-const DIRECTOR_BOOKS = join(BOOKS_DIR, 'director-books');
-const ACTRESS_BOOKS = join(BOOKS_DIR, 'actress-books');
-const CUTTER_BOOKS = join(BOOKS_DIR, 'cutter-books');
+function wikiPath(prefix: string, filename: string): string {
+	const base = filename.replace(/\.md$/, '').replace(/-/g, ' ');
+	return join(WIKI_DIR, `${prefix} ${base}.md`);
+}
 
-function readModule(dir: string, filename: string): string {
-	return readFileSync(join(dir, filename), 'utf-8');
+function readModule(prefix: string, filename: string): string {
+	return readFileSync(wikiPath(prefix, filename), 'utf-8');
 }
 
 // === Director Assembly ===
@@ -48,7 +48,7 @@ export function assembleDirectorBooks(
 	turnContext: TurnContext
 ): { prompt: string; modules: string[] } {
 	const modules = getDirectorModules(directorModel, actressModel);
-	const parts = modules.map((f) => readModule(DIRECTOR_BOOKS, f));
+	const parts = modules.map((f) => readModule('Director for Character', f));
 
 	let prompt = parts.join('\n\n');
 
@@ -63,22 +63,22 @@ export function assembleDirectorBooks(
 }
 
 // === Actress Assembly ===
-// Assembly order: 01 → 02 → 03 → 04 → 05
-// Swap rules: 04 by character
+// Assembly order: 01 → 02 → 03 → 05 (04 excluded: anti-prescription)
+// Swap rules: none currently
 
 export function getActressModules(): string[] {
 	return [
 		'01-core-identity.md',
 		'02-voice-and-tone.md',
 		'03-constraints.md',
-		'04-character-sophie.md',
+		// 04-character-sophie excluded: anti-prescription principle. Director controls backstory reveal.
 		'05-receiving-direction.md',
 	];
 }
 
 export function assembleActressBooks(): { prompt: string; modules: string[] } {
 	const modules = getActressModules();
-	const parts = modules.map((f) => readModule(ACTRESS_BOOKS, f));
+	const parts = modules.map((f) => readModule('Actress for Character', f));
 	return { prompt: parts.join('\n\n'), modules };
 }
 
@@ -99,7 +99,62 @@ export function getCutterModules(cutterModel: DirectorModel): string[] {
 
 export function assembleCutterBooks(cutterModel: DirectorModel): { prompt: string; modules: string[] } {
 	const modules = getCutterModules(cutterModel);
-	const parts = modules.map((f) => readModule(CUTTER_BOOKS, f));
+	const parts = modules.map((f) => readModule('Artisan Cutter', f));
+	return { prompt: parts.join('\n\n'), modules };
+}
+
+// === Director for User Assembly ===
+// Assembly order: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 10 → 11 (09 deprecated, skipped)
+// User-side mirror of Director for Character, adapted for user persona
+
+export function getUserDirectorModules(): string[] {
+	return [
+		'01-core-identity.md',
+		'02-output-format-deepseek.md',
+		'03-north-star.md',
+		'04-full-emotional-range.md',
+		'05-persona-marcus.md',
+		'06-actor-model-cydonia-v41.md',
+		'07-session-context.md',
+		'08-environment-injection.md',
+		'10-vulnerability-detection.md',
+		'11-failure-mode-countermeasures.md',
+	];
+}
+
+export function assembleUserDirectorBooks(
+	turnContext: TurnContext
+): { prompt: string; modules: string[] } {
+	const modules = getUserDirectorModules();
+	const parts = modules.map((f) => readModule('Director for User', f));
+
+	let prompt = parts.join('\n\n');
+
+	// Fill Module 07 placeholders
+	prompt = prompt
+		.replace('{turn_number}', String(turnContext.turnNumber))
+		.replace('{timestamp}', turnContext.timestamp)
+		.replace('{stage}', turnContext.stage)
+		.replace('{inferred_pacing}', turnContext.pacing);
+
+	return { prompt, modules };
+}
+
+// === Actor for User Assembly ===
+// Assembly order: 01 → 02 → 03 → 05 (mirrors Actress for Character, no Module 04 — anti-prescription)
+
+export function getActorForUserModules(): string[] {
+	return [
+		'01-core-identity.md',
+		'02-voice-and-tone.md',
+		'03-constraints.md',
+		'05-receiving-direction.md',
+	];
+}
+
+export function assembleActorForUserBooks(): { prompt: string; modules: string[] } {
+	const modules = getActorForUserModules();
+	const parts = modules.map((f) => readModule('Actor for User', f));
 	return { prompt: parts.join('\n\n'), modules };
 }
 
