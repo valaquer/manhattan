@@ -5,7 +5,7 @@
 
 	// === Types ===
 	interface TurnBlock {
-		type: 'user' | 'director' | 'actress' | 'cutter' | 'klara';
+		type: string;
 		sender: string;
 		content: string;
 		meta?: Record<string, unknown>;
@@ -110,18 +110,18 @@
 						streamingContent += event.content;
 						// Update the current Sophie block with streaming content
 						const currentTurn = turns[currentTurnIndex];
-						const sophieBlock = currentTurn.blocks.find(b => b.type === 'actress');
+						const sophieBlock = currentTurn.blocks.find(b => b.type === 'actress-for-character' || b.type === 'actress');
 						if (sophieBlock) {
 							sophieBlock.content = streamingContent;
 							turns = [...turns]; // trigger reactivity
 						}
-					} else if (event.type === 'actress' && event.streaming) {
-						// Streaming start — add empty Sophie block
+					} else if (event.type === 'actress-for-character' && event.streaming) {
+						// Streaming start — add empty Actress block
 						const currentTurn = turns[currentTurnIndex];
-						currentTurn.blocks = [...currentTurn.blocks, { type: 'actress', sender: 'Sophie', content: '' }];
+						currentTurn.blocks = [...currentTurn.blocks, { type: 'actress-for-character', sender: 'Actress for Character', content: '' }];
 						turns = [...turns];
 						streamingContent = '';
-					} else if (event.type === 'actress' && !event.streaming) {
+					} else if (event.type === 'actress-for-character' && !event.streaming) {
 						// Streaming complete — finalize Sophie block
 						streamingContent = '';
 					} else if (event.type === 'error') {
