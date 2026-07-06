@@ -47,22 +47,6 @@
 	onMount(() => {
 		loadTurns();
 
-		// Listen for Klara reviews via SSE
-		const klaraSource = new EventSource('/api/klara-review');
-		klaraSource.onmessage = (event) => {
-			try {
-				const data = JSON.parse(event.data);
-				if (data.type === 'klara' && turns.length > 0) {
-					const targetTurn = turns.find(t => t.number === data.turnNumber);
-					if (targetTurn) {
-						targetTurn.blocks = [...targetTurn.blocks, { type: 'klara', sender: 'Klara', content: data.content }];
-						turns = [...turns];
-					}
-				}
-			} catch {
-				// skip
-			}
-		};
 
 		return () => klaraSource.close();
 	});
@@ -358,7 +342,7 @@
 	/* --- Turn blocks --- */
 	.turn-block {
 		display: grid;
-		grid-template-columns: 140px minmax(0, 1fr);
+		grid-template-columns: 180px minmax(0, 1fr);
 		gap: 0 12px;
 		margin-bottom: 16px;
 		padding: 12px 8px;

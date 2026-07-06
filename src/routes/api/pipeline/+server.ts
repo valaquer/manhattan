@@ -175,17 +175,17 @@ export const POST: RequestHandler = async () => {
 				emit('artisan-cutter', 'Artisan Cutter', cutterContent);
 
 				// === Klara notification (async, non-blocking) ===
-				const klaraSummary = `[Manhattan Turn ${turnNumber}]\n\nMarcus: ${marcusMessage}\n\nDirector: ${directorContent}\n\nSophie: ${sophieContent}\n\nCutter: ${cutterContent}`;
+				const turnSummary = `[Manhattan Turn ${turnNumber}]\n\nDirector for User: ${userDirectorContent}\n\nActor for User (Marcus): ${marcusMessage}\n\nDirector for Character: ${directorContent}\n\nActress for Character (Sophie): ${sophieContent}\n\nArtisan Cutter: ${cutterContent}`;
 				try {
 					await fetch('http://localhost:51730/api/message', {
 						method: 'POST',
 						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({ sender: 'system', room: 'direct-klara', body: klaraSummary }),
+						body: JSON.stringify({ sender: 'system', room: 'huddle-hana', body: turnSummary }),
 					});
 				} catch {
 					// Aether may be unreachable — non-blocking
 				}
-				emit('klara_pending', 'System', `Turn ${turnNumber} sent to Klara for evaluation`);
+				emit('notification', 'System', `Turn ${turnNumber} sent to Hana's huddle`);
 
 				controller.enqueue(encoder.encode('data: [DONE]\n\n'));
 			} catch (err) {
