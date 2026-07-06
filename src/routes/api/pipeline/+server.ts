@@ -82,7 +82,7 @@ export const POST: RequestHandler = async () => {
 
 				const userDirectorContent = JSON.stringify(userDirectorJson, null, 2);
 				savePipelineOutput(sessionId, turnNumber, 'director-for-user', DIRECTOR_MODEL, userDirectorContent);
-				emit('director-for-user', 'Director (User)', userDirectorContent);
+				emit('director-for-user', 'Director for User', userDirectorContent);
 
 				// === Call 2: Actor-for-User (Marcus) ===
 				const actorBooks = assembleActorForUserBooks();
@@ -96,7 +96,7 @@ export const POST: RequestHandler = async () => {
 				const marcusMessage = marcusRaw.trim();
 				saveMessage(sessionId, turnNumber, 'Marcus', marcusMessage);
 				savePipelineOutput(sessionId, turnNumber, 'actor-for-user', ACTRESS_MODEL, marcusMessage);
-				emit('user', 'Marcus', marcusMessage);
+				emit('actor-for-user', 'Actor for User', marcusMessage);
 
 				// === Call 3: Director-for-Character ===
 				const directorBooks = assembleDirectorBooks('deepseek', 'cydonia', turnContext);
@@ -122,12 +122,12 @@ export const POST: RequestHandler = async () => {
 
 				const directorContent = JSON.stringify(directorJson, null, 2);
 				savePipelineOutput(sessionId, turnNumber, 'director-for-character', DIRECTOR_MODEL, directorContent);
-				emit('director', 'Director', directorContent);
+				emit('director-for-character', 'Director for Character', directorContent);
 
 				// === Call 4: Actress-for-Character (Sophie) — streaming ===
 				const actressBooks = assembleActressBooks();
 				let sophieContent = '';
-				emit('actress', 'Sophie', '', true);
+				emit('actress-for-character', 'Actress for Character', '', true);
 
 				for await (const chunk of streamModel(
 					ACTRESS_MODEL,
@@ -142,7 +142,7 @@ export const POST: RequestHandler = async () => {
 
 				saveMessage(sessionId, turnNumber, 'Sophie', sophieContent);
 				savePipelineOutput(sessionId, turnNumber, 'actress-for-character', ACTRESS_MODEL, sophieContent);
-				emit('actress', 'Sophie', sophieContent);
+				emit('actress-for-character', 'Actress for Character', sophieContent);
 
 				// === Call 5: Artisan Cutter ===
 				const cutterBooks = assembleCutterBooks('deepseek');
@@ -172,7 +172,7 @@ export const POST: RequestHandler = async () => {
 				}
 
 				savePipelineOutput(sessionId, turnNumber, 'artisan-cutter', CUTTER_MODEL, cutterContent);
-				emit('cutter', 'Cutter', cutterContent);
+				emit('artisan-cutter', 'Artisan Cutter', cutterContent);
 
 				// === Klara notification (async, non-blocking) ===
 				const klaraSummary = `[Manhattan Turn ${turnNumber}]\n\nMarcus: ${marcusMessage}\n\nDirector: ${directorContent}\n\nSophie: ${sophieContent}\n\nCutter: ${cutterContent}`;

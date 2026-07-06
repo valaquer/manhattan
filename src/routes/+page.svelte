@@ -154,10 +154,11 @@
 	// === Block colors ===
 	function blockColor(type: string): string {
 		switch (type) {
-			case 'user': return '#D4A574';
-			case 'director': return '#888';
-			case 'actress': return '#AE0D46';
-			case 'cutter': return '#888';
+			case 'director-for-user': return '#888';
+			case 'actor-for-user': case 'user': return '#D4A574';
+			case 'director-for-character': case 'director': return '#888';
+			case 'actress-for-character': case 'actress': return '#AE0D46';
+			case 'artisan-cutter': case 'cutter': return '#888';
 			case 'klara': return '#b0aba5';
 			default: return '#888';
 		}
@@ -165,17 +166,22 @@
 
 	function blockLabel(type: string): string {
 		switch (type) {
-			case 'user': return 'MARCUS';
-			case 'director': return 'DIRECTOR';
-			case 'actress': return 'SOPHIE';
-			case 'cutter': return 'CUTTER';
+			case 'director-for-user': return 'DIRECTOR FOR USER';
+			case 'actor-for-user': return 'ACTOR FOR USER';
+			case 'user': return 'ACTOR FOR USER';
+			case 'director-for-character': return 'DIRECTOR FOR CHARACTER';
+			case 'director': return 'DIRECTOR FOR CHARACTER';
+			case 'actress-for-character': return 'ACTRESS FOR CHARACTER';
+			case 'actress': return 'ACTRESS FOR CHARACTER';
+			case 'artisan-cutter': return 'ARTISAN CUTTER';
+			case 'cutter': return 'ARTISAN CUTTER';
 			case 'klara': return 'KLARA';
-			default: return type.toUpperCase();
+			default: return type.toUpperCase().replace(/_/g, ' ');
 		}
 	}
 
 	function isJson(type: string): boolean {
-		return type === 'director' || type === 'cutter';
+		return type === 'director' || type === 'cutter' || type === 'director-for-user' || type === 'director-for-character' || type === 'artisan-cutter';
 	}
 </script>
 
@@ -200,9 +206,11 @@
 			<!-- Pipeline info -->
 			<div class="pipeline-info">
 				<div class="pipeline-label">Pipeline</div>
-				<div class="pipeline-row"><span class="pipeline-dot" style="background: #888;"></span> Director — DeepSeek V4 Flash</div>
-				<div class="pipeline-row"><span class="pipeline-dot" style="background: #AE0D46;"></span> Actress — Cydonia 24B v4.1</div>
-				<div class="pipeline-row"><span class="pipeline-dot" style="background: #888;"></span> Cutter — DeepSeek V4 Flash</div>
+				<div class="pipeline-row"><span class="pipeline-dot" style="background: #888;"></span> Director for User — DeepSeek V4 Flash</div>
+				<div class="pipeline-row"><span class="pipeline-dot" style="background: #D4A574;"></span> Actor for User — Cydonia 24B v4.1</div>
+				<div class="pipeline-row"><span class="pipeline-dot" style="background: #888;"></span> Director for Character — DeepSeek V4 Flash</div>
+				<div class="pipeline-row"><span class="pipeline-dot" style="background: #AE0D46;"></span> Actress for Character — Cydonia 24B v4.1</div>
+				<div class="pipeline-row"><span class="pipeline-dot" style="background: #888;"></span> Artisan Cutter — DeepSeek V4 Flash</div>
 				<div class="pipeline-row"><span class="pipeline-dot" style="background: #b0aba5;"></span> Klara — Evaluator</div>
 			</div>
 		</div>
@@ -350,7 +358,7 @@
 	/* --- Turn blocks --- */
 	.turn-block {
 		display: grid;
-		grid-template-columns: 80px minmax(0, 1fr);
+		grid-template-columns: 140px minmax(0, 1fr);
 		gap: 0 12px;
 		margin-bottom: 16px;
 		padding: 12px 8px;
