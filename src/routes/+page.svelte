@@ -110,7 +110,7 @@
 						streamingContent = '';
 					} else if (event.type === 'error') {
 						const currentTurn = turns[currentTurnIndex];
-						currentTurn.blocks = [...currentTurn.blocks, { type: 'klara' as const, sender: 'Error', content: event.content }];
+						currentTurn.blocks = [...currentTurn.blocks, { type: 'error', sender: 'Error', content: event.content }];
 						turns = [...turns];
 					} else {
 						// Normal block (user, director, cutter)

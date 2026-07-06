@@ -168,10 +168,10 @@ export const POST: RequestHandler = async () => {
 					if (cj.emotion_echo) saveMemory(sessionId, 'emotion_echo', String(cj.emotion_echo), turnNumber);
 					if (cj.rolling_arc_summary) saveMemory(sessionId, 'rolling_arc', String(cj.rolling_arc_summary), turnNumber);
 				} catch {
-					cutterContent = cutterRaw;
+					cutterContent = cutterRaw || '[no output]';
 				}
 
-				savePipelineOutput(sessionId, turnNumber, 'artisan-cutter', CUTTER_MODEL, cutterContent);
+				savePipelineOutput(sessionId, turnNumber, 'artisan-cutter', CUTTER_MODEL, cutterContent || '[no output]');
 				emit('artisan-cutter', 'Artisan Cutter', cutterContent);
 
 				// === Klara notification (async, non-blocking) ===
