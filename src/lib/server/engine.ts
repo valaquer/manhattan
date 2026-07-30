@@ -13,8 +13,8 @@ import {
 	loadCharacterSheet,
 	extractFirstTurnInsert,
 	buildIdentityHeader,
-} from '$lib/server/books-v2';
-import type { AgentRole, CharacterName, OnboardingState } from '$lib/server/books-v2';
+} from '$lib/server/books';
+import type { AgentRole, CharacterName, OnboardingState } from '$lib/server/books';
 import { callModel, streamModel } from '$lib/server/openrouter';
 import {
 	formatTranscript,

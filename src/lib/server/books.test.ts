@@ -5,10 +5,10 @@ import {
 	loadCharacterSheet,
 	extractFirstTurnInsert,
 	buildIdentityHeader,
-} from './books-v2';
-import type { AgentRole, CharacterName } from './books-v2';
+} from './books';
+import type { AgentRole, CharacterName } from './books';
 
-const ROLES: AgentRole[] = ['director', 'actress', 'reviewer', 'cutter', 'archivist'];
+const ROLES: AgentRole[] = ['director', 'actress', 'reviewer', 'cutter', 'archivist', 'director-user', 'actor-user'];
 const CHARACTERS: CharacterName[] = [
 	'Sophie', 'Valentina', 'Priya', 'Sara', 'Jiwoo', 'Tsion',
 	'Adaeze', 'Avery', 'Hina', 'Isabela', 'Lani', 'Nadia',
@@ -139,9 +139,9 @@ describe('buildIdentityHeader', () => {
 });
 
 describe('no SvelteKit dependencies', () => {
-	it('books-v2.ts does not import $env', async () => {
+	it('books.ts does not import $env', async () => {
 		const { readFileSync } = await import('fs');
-		const source = readFileSync(new URL('./books-v2.ts', import.meta.url), 'utf-8');
+		const source = readFileSync(new URL('./books.ts', import.meta.url), 'utf-8');
 		expect(source).not.toContain('$env');
 		expect(source).not.toContain('@sveltejs');
 	});
