@@ -25,7 +25,7 @@ vi.mock('$lib/server/db', () => ({
 
 // Mock OpenRouter
 vi.mock('$lib/server/openrouter', () => ({
-	callModel: vi.fn(async () => '{"direction":"test direction","environment":"test env"}'),
+	callModel: vi.fn(async () => '{"world":null,"scene":{"read":"test direction"},"checks":[],"strategy":"test env"}'),
 	streamModel: vi.fn(async function* () { yield 'Hello '; yield 'world.'; }),
 }));
 
@@ -67,7 +67,7 @@ beforeEach(() => {
 
 	// Default: Director returns valid JSON, Reviewer passes, Cutter returns valid JSON
 	mockedCallModel.mockImplementation(async (_model, _sys, _msgs) => {
-		return '{"direction":"test direction","environment":"test env"}';
+		return '{"world":null,"scene":{"read":"test direction"},"checks":[],"strategy":"test env"}';
 	});
 });
 
@@ -76,11 +76,11 @@ describe('runPipeline - fixture mode', () => {
 		let callCount = 0;
 		mockedCallModel.mockImplementation(async () => {
 			callCount++;
-			if (callCount <= 2) return '{"direction":"test","environment":"env"}'; // Directors
+			if (callCount <= 2) return '{"world":null,"scene":"test","checks":[],"strategy":"env"}'; // Directors
 			if (callCount === 3) return 'Hello from actor'; // Actor
-			if (callCount === 4) return '{"direction":"char dir","environment":"char env"}'; // Director-for-char
+			if (callCount === 4) return '{"world":null,"scene":"char dir","checks":[],"strategy":"char env"}'; // Director-for-char
 			if (callCount === 5) return '{"verdict":"pass"}'; // Reviewer
-			if (callCount === 6) return '{"tier_1":null,"tier_2":null,"emotion_echo":"neutral","rolling_arc_summary":"test"}'; // Cutter
+			if (callCount === 6) return '{"operations":[],"emotion_echo":"neutral","rolling_arc_update":"","rolling_arc_summary":"test"}'; // Cutter
 			return '{}';
 		});
 
@@ -106,9 +106,9 @@ describe('runPipeline - production mode', () => {
 		let callCount = 0;
 		mockedCallModel.mockImplementation(async () => {
 			callCount++;
-			if (callCount === 1) return '{"direction":"dir","environment":"env"}'; // Director
+			if (callCount === 1) return '{"world":null,"scene":"dir","checks":[],"strategy":"env"}'; // Director
 			if (callCount === 2) return '{"verdict":"pass"}'; // Reviewer
-			if (callCount === 3) return '{"tier_1":null,"tier_2":null,"emotion_echo":"ok","rolling_arc_summary":"arc"}'; // Cutter
+			if (callCount === 3) return '{"operations":[],"emotion_echo":"ok","rolling_arc_update":"","rolling_arc_summary":"arc"}'; // Cutter
 			return '{}';
 		});
 
@@ -141,7 +141,7 @@ describe('Director refusal - abort', () => {
 		let callCount = 0;
 		mockedCallModel.mockImplementation(async () => {
 			callCount++;
-			if (callCount === 1) return '{"direction":"d","environment":"e"}'; // Dir-for-user
+			if (callCount === 1) return '{"world":null,"scene":"d","checks":[],"strategy":"e"}'; // Dir-for-user
 			if (callCount === 2) return 'user msg'; // Actor
 			if (callCount === 3) return 'I cannot assist with that'; // Dir-for-char refuses
 			return '{}';
@@ -161,9 +161,9 @@ describe('Reviewer retry loop', () => {
 		let callCount = 0;
 		mockedCallModel.mockImplementation(async () => {
 			callCount++;
-			if (callCount <= 3) return '{"direction":"d","environment":"e"}';
+			if (callCount <= 3) return '{"world":null,"scene":"d","checks":[],"strategy":"e"}';
 			if (callCount === 4) return '{"verdict":"pass"}'; // Reviewer passes
-			if (callCount === 5) return '{"tier_1":null,"tier_2":null}'; // Cutter
+			if (callCount === 5) return '{"operations":[]}'; // Cutter
 			return '{}';
 		});
 
@@ -176,10 +176,10 @@ describe('Reviewer retry loop', () => {
 		let callCount = 0;
 		mockedCallModel.mockImplementation(async () => {
 			callCount++;
-			if (callCount <= 3) return '{"direction":"d","environment":"e"}';
+			if (callCount <= 3) return '{"world":null,"scene":"d","checks":[],"strategy":"e"}';
 			if (callCount === 4) return '{"verdict":"reject","fault":"performance","reason":"too flat"}'; // Reviewer rejects
 			if (callCount === 5) return '{"verdict":"pass"}'; // Reviewer passes on retry
-			if (callCount === 6) return '{"tier_1":null,"tier_2":null}'; // Cutter
+			if (callCount === 6) return '{"operations":[]}'; // Cutter
 			return '{}';
 		});
 
@@ -193,10 +193,10 @@ describe('Reviewer retry loop', () => {
 		let callCount = 0;
 		mockedCallModel.mockImplementation(async () => {
 			callCount++;
-			if (callCount <= 3) return '{"direction":"d","environment":"e"}';
+			if (callCount <= 3) return '{"world":null,"scene":"d","checks":[],"strategy":"e"}';
 			if (callCount === 4) return '{"verdict":"reject","fault":"performance","reason":"bad"}'; // 1st reject
 			if (callCount === 5) return '{"verdict":"reject","fault":"performance","reason":"still bad"}'; // 2nd reject
-			if (callCount === 6) return '{"tier_1":null,"tier_2":null}'; // Cutter
+			if (callCount === 6) return '{"operations":[]}'; // Cutter
 			return '{}';
 		});
 
@@ -211,9 +211,9 @@ describe('Reviewer infrastructure failure (Decision 2B)', () => {
 		let callCount = 0;
 		mockedCallModel.mockImplementation(async () => {
 			callCount++;
-			if (callCount <= 3) return '{"direction":"d","environment":"e"}';
+			if (callCount <= 3) return '{"world":null,"scene":"d","checks":[],"strategy":"e"}';
 			if (callCount === 4) throw new Error('OpenRouter 500'); // Reviewer infra failure
-			if (callCount === 5) return '{"tier_1":null,"tier_2":null}'; // Cutter
+			if (callCount === 5) return '{"operations":[]}'; // Cutter
 			return '{}';
 		});
 
@@ -232,9 +232,9 @@ describe('Reviewer infrastructure failure (Decision 2B)', () => {
 		let callCount = 0;
 		mockedCallModel.mockImplementation(async () => {
 			callCount++;
-			if (callCount <= 3) return '{"direction":"d","environment":"e"}';
+			if (callCount <= 3) return '{"world":null,"scene":"d","checks":[],"strategy":"e"}';
 			if (callCount === 4) return 'not json at all!!!'; // Unparseable
-			if (callCount === 5) return '{"tier_1":null,"tier_2":null}'; // Cutter
+			if (callCount === 5) return '{"operations":[]}'; // Cutter
 			return '{}';
 		});
 
@@ -250,7 +250,7 @@ describe('Cutter failure - degrade gracefully', () => {
 		let callCount = 0;
 		mockedCallModel.mockImplementation(async () => {
 			callCount++;
-			if (callCount <= 3) return '{"direction":"d","environment":"e"}';
+			if (callCount <= 3) return '{"world":null,"scene":"d","checks":[],"strategy":"e"}';
 			if (callCount === 4) return '{"verdict":"pass"}'; // Reviewer
 			if (callCount === 5) throw new Error('Cutter timeout'); // Cutter fails
 			return '{}';
@@ -270,9 +270,9 @@ describe('Archivist trigger', () => {
 		let callCount = 0;
 		mockedCallModel.mockImplementation(async () => {
 			callCount++;
-			if (callCount <= 3) return '{"direction":"d","environment":"e"}';
+			if (callCount <= 3) return '{"world":null,"scene":"d","checks":[],"strategy":"e"}';
 			if (callCount === 4) return '{"verdict":"pass"}';
-			if (callCount === 5) return '{"tier_1":null,"tier_2":null,"emotion_echo":"sad","rolling_arc_summary":"arc","episode_boundary":{"detected":true}}';
+			if (callCount === 5) return '{"operations":[],"emotion_echo":"sad","rolling_arc_update":"","rolling_arc_summary":"arc","episode_boundary":{"detected":true}}';
 			return '{}';
 		});
 
@@ -288,9 +288,9 @@ describe('Token instrumentation', () => {
 		let callCount = 0;
 		mockedCallModel.mockImplementation(async () => {
 			callCount++;
-			if (callCount <= 3) return '{"direction":"d","environment":"e"}';
+			if (callCount <= 3) return '{"world":null,"scene":"d","checks":[],"strategy":"e"}';
 			if (callCount === 4) return '{"verdict":"pass"}';
-			if (callCount === 5) return '{"tier_1":null,"tier_2":null}';
+			if (callCount === 5) return '{"operations":[]}';
 			return '{}';
 		});
 

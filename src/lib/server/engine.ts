@@ -179,7 +179,7 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 			const dirUserResult = parseDirectorOutput(dirUserRaw);
 			const dirUserContent = dirUserResult.refused
 				? `[REFUSED] ${dirUserResult.raw}`
-				: JSON.stringify({ direction: dirUserResult.direction, environment: dirUserResult.environment }, null, 2);
+				: JSON.stringify({ world: dirUserResult.world, scene: dirUserResult.scene, checks: dirUserResult.checks, strategy: dirUserResult.strategy }, null, 2);
 
 			savePipelineOutput(sessionId, turnNumber, 'director-for-user', models.director, dirUserContent);
 			yield { type: 'stage', stage: 'director-for-user', content: dirUserContent, model: models.director, meta: dirUserMerge.meta };
@@ -251,7 +251,7 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 		const directorResult = parseDirectorOutput(directorRaw);
 		const directorContent = directorResult.refused
 			? `[REFUSED] ${directorResult.raw}`
-			: JSON.stringify({ direction: directorResult.direction, environment: directorResult.environment }, null, 2);
+			: JSON.stringify({ world: directorResult.world, scene: directorResult.scene, checks: directorResult.checks, strategy: directorResult.strategy }, null, 2);
 
 		savePipelineOutput(sessionId, turnNumber, 'director-for-character', models.director, directorContent);
 		yield { type: 'stage', stage: 'director-for-character', content: directorContent, model: models.director, meta: directorMerge.meta };
@@ -309,8 +309,8 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 			const verdict = parseReviewerVerdict(reviewRaw);
 			reviewAttempt = 1;
 
-			if (verdict.verdict === 'pass') {
-				if (verdict.edits) characterResponse = verdict.edits;
+			if (verdict.verdict === 'pass' || verdict.verdict === 'edit') {
+				if (verdict.reply) characterResponse = verdict.reply;
 				reviewPassed = true;
 			} else if (verdict.verdict === 'reject') {
 				yield { type: 'retry', stage: 'reviewer', attempt: 1, fault: verdict.fault ?? 'performance' };
@@ -350,8 +350,8 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 				const verdict2 = parseReviewerVerdict(review2Raw);
 				reviewAttempt = 2;
 
-				if (verdict2.verdict === 'pass') {
-					if (verdict2.edits) characterResponse = verdict2.edits;
+				if (verdict2.verdict === 'pass' || verdict2.verdict === 'edit') {
+					if (verdict2.reply) characterResponse = verdict2.reply;
 					reviewPassed = true;
 				} else {
 					// Double rejection → fallback
@@ -394,15 +394,15 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 
 			if (cutterResult.parsed) {
 				cutterContent = JSON.stringify({
-					tier_1: cutterResult.tier_1,
-					tier_2: cutterResult.tier_2,
+					operations: cutterResult.operations,
 					emotion_echo: cutterResult.emotion_echo,
+					rolling_arc_update: cutterResult.rolling_arc_update,
 					rolling_arc_summary: cutterResult.rolling_arc_summary,
 				}, null, 2);
 
-				if (cutterResult.tier_1) saveMemory(sessionId, 'tier1', JSON.stringify(cutterResult.tier_1), turnNumber);
-				if (cutterResult.tier_2) saveMemory(sessionId, 'tier2', JSON.stringify(cutterResult.tier_2), turnNumber);
+				if (cutterResult.operations) saveMemory(sessionId, 'operations', JSON.stringify(cutterResult.operations), turnNumber);
 				if (cutterResult.emotion_echo) saveMemory(sessionId, 'emotion_echo', cutterResult.emotion_echo, turnNumber);
+				if (cutterResult.rolling_arc_update) saveMemory(sessionId, 'rolling_arc_update', cutterResult.rolling_arc_update, turnNumber);
 				if (cutterResult.rolling_arc_summary) saveMemory(sessionId, 'rolling_arc', cutterResult.rolling_arc_summary, turnNumber);
 
 				// Archivist trigger check (stubbed persistence per Decision 1A)
@@ -453,11 +453,11 @@ async function generateActressBuffered(
 }
 
 interface ReviewerVerdict {
-	verdict: 'pass' | 'reject';
+	verdict: 'pass' | 'reject' | 'edit';
 	fault?: 'performance' | 'brief';
 	reason?: string;
-	edits?: string;
-	check?: number;
+	reply?: string;
+	log?: string;
 }
 
 function parseReviewerVerdict(raw: string): ReviewerVerdict {
@@ -468,11 +468,11 @@ function parseReviewerVerdict(raw: string): ReviewerVerdict {
 		}
 		const parsed = JSON.parse(cleaned) as Record<string, unknown>;
 		return {
-			verdict: parsed.verdict === 'reject' ? 'reject' : 'pass',
+			verdict: parsed.verdict === 'reject' ? 'reject' : parsed.verdict === 'edit' ? 'edit' : 'pass',
 			fault: parsed.fault === 'brief' ? 'brief' : parsed.fault === 'performance' ? 'performance' : undefined,
 			reason: typeof parsed.reason === 'string' ? parsed.reason : undefined,
-			edits: typeof parsed.edited_text === 'string' ? parsed.edited_text : undefined,
-			check: typeof parsed.check === 'number' ? parsed.check : undefined,
+			reply: typeof parsed.reply === 'string' ? parsed.reply : undefined,
+			log: typeof parsed.log === 'string' ? parsed.log : undefined,
 		};
 	} catch {
 		throw new Error('Reviewer returned unparseable output');
