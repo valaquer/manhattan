@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Manhattan — Director/Actress/Cutter Pipeline Workbench
+	// Manhattan --Director/Actress/Cutter Pipeline Workbench
 	import { Rewind, FastForward, Play, Pause, RotateCcw, RotateCw } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 
@@ -100,13 +100,13 @@
 							turns = [...turns]; // trigger reactivity
 						}
 					} else if (event.type === 'actress-for-character' && event.streaming) {
-						// Streaming start — add empty Actress block
+						// Streaming start --add empty Actress block
 						const currentTurn = turns[currentTurnIndex];
 						currentTurn.blocks = [...currentTurn.blocks, { type: 'actress-for-character', sender: 'Actress for Character', content: '' }];
 						turns = [...turns];
 						streamingContent = '';
 					} else if (event.type === 'actress-for-character' && !event.streaming) {
-						// Streaming complete — finalize Sophie block
+						// Streaming complete --finalize Sophie block
 						streamingContent = '';
 					} else if (event.type === 'error') {
 						const currentTurn = turns[currentTurnIndex];
@@ -190,12 +190,12 @@
 			<!-- Pipeline info -->
 			<div class="pipeline-info">
 				<div class="pipeline-label">Pipeline</div>
-				<div class="pipeline-row"><span class="pipeline-dot" style="background: #888;"></span> Director for User — DeepSeek V4 Flash</div>
-				<div class="pipeline-row"><span class="pipeline-dot" style="background: #D4A574;"></span> Actor for User — Cydonia 24B v4.1</div>
-				<div class="pipeline-row"><span class="pipeline-dot" style="background: #888;"></span> Director for Character — DeepSeek V4 Flash</div>
-				<div class="pipeline-row"><span class="pipeline-dot" style="background: #AE0D46;"></span> Actress for Character — Cydonia 24B v4.1</div>
-				<div class="pipeline-row"><span class="pipeline-dot" style="background: #888;"></span> Artisan Cutter — DeepSeek V4 Flash</div>
-				<div class="pipeline-row"><span class="pipeline-dot" style="background: #b0aba5;"></span> Klara — Evaluator</div>
+				<div class="pipeline-row"><span class="pipeline-dot" style="background: #888;"></span> Director for User --DeepSeek V4 Flash</div>
+				<div class="pipeline-row"><span class="pipeline-dot" style="background: #D4A574;"></span> Actor for User --Hermes 4 70B</div>
+				<div class="pipeline-row"><span class="pipeline-dot" style="background: #888;"></span> Director for Character --DeepSeek V4 Flash</div>
+				<div class="pipeline-row"><span class="pipeline-dot" style="background: #AE0D46;"></span> Actress for Character --Hermes 4 70B</div>
+				<div class="pipeline-row"><span class="pipeline-dot" style="background: #888;"></span> Artisan Cutter --DeepSeek V4 Flash</div>
+				<div class="pipeline-row"><span class="pipeline-dot" style="background: #b0aba5;"></span> Klara --Evaluator</div>
 			</div>
 		</div>
 		<div class="hb-sidebar-footer">
