@@ -1,239 +1,169 @@
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
 const WIKI_DIR = '/Users/deepak-macmini/honeybloom/library/wiki';
+const BOOKS_DIR = join(WIKI_DIR, 'Relationship Engine', 'books');
+const CHARACTERS_DIR = join(WIKI_DIR, 'Relationship Engine', 'characters');
 
-function wikiPath(prefix: string, filename: string): string {
-	const base = filename.replace(/\.md$/, '').replace(/-/g, ' ');
-	return join(WIKI_DIR, `${prefix} ${base}.md`);
+export type AgentRole = 'director' | 'actress' | 'reviewer' | 'cutter' | 'archivist' | 'director-user' | 'actor-user';
+
+export type CharacterName = 'Sophie' | 'Valentina' | 'Priya' | 'Sara' | 'Jiwoo' | 'Tsion' | 'Adaeze' | 'Avery' | 'Hina' | 'Isabela' | 'Lani' | 'Nadia';
+
+export interface CharacterSheet {
+	voiceBlock: string;
+	canon: {
+		lifeFacts: string;
+		backstory: string;
+		sensitivities: string;
+		wantsAndFears: string;
+		eroticSelf: string;
+	};
+	casting: string;
+	disclosureLine: string;
+	fallbackPool: string[];
 }
 
-function readModule(prefix: string, filename: string): string {
-	return readFileSync(wikiPath(prefix, filename), 'utf-8');
+const BOOK_FILES: Record<AgentRole, string> = {
+	'director': 'Director Book V2.md',
+	'actress': 'Actress Book V2.md',
+	'reviewer': 'Reviewer Book V1.md',
+	'cutter': 'Cutter Book V2.md',
+	'archivist': 'Archivist Book V2.md',
+	'director-user': 'Director for User Book V2.md',
+	'actor-user': 'Actor for User Book V2.md',
+};
+
+export function loadBook(role: AgentRole): string {
+	const filename = BOOK_FILES[role];
+	const filepath = join(BOOKS_DIR, filename);
+	return readFileSync(filepath, 'utf-8');
 }
 
-// === Director Assembly ===
-// Assembly order: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09 → 10 → 11
-// Swap rules: 02 by director model, 05 by character, 06 by actress model
-
-interface TurnContext {
-	turnNumber: number;
-	timestamp: string;
-	stage: string;
-	pacing: string;
+export function loadModelProfile(role: AgentRole, model: string): string | null {
+	const roleName = role === 'director-user' ? 'Director for User'
+		: role === 'actor-user' ? 'Actor for User'
+		: role.charAt(0).toUpperCase() + role.slice(1);
+	const filename = `Model Profile – ${roleName} – ${model}.md`;
+	const filepath = join(BOOKS_DIR, filename);
+	if (!existsSync(filepath)) return null;
+	return readFileSync(filepath, 'utf-8');
 }
 
-type DirectorModel = 'deepseek' | 'grok';
-type ActressModel = 'cydonia' | 'hermes';
+export function loadCharacterSheet(name: CharacterName): CharacterSheet {
+	const filepath = join(CHARACTERS_DIR, `Character_Sheet_${name}.md`);
+	const text = readFileSync(filepath, 'utf-8');
+	const sections = parseCharacterSections(text);
 
-export function getDirectorModules(directorModel: DirectorModel, actressModel: ActressModel): string[] {
-	return [
-		'01-core-identity.md',
-		directorModel === 'deepseek' ? '02-output-format-deepseek.md' : '02-output-format-grok.md',
-		'03-north-star.md',
-		'04-full-emotional-range.md',
-		'05-character-sophie.md',
-		actressModel === 'cydonia' ? '06-actor-model-cydonia-v41.md' : '06-actor-model-hermes-3-70b.md',
-		'07-session-context.md',
-		'08-environment-injection.md',
-		'09-inner-voice.deprecated.md',
-		'10-vulnerability-detection.md',
-		'11-failure-mode-countermeasures.md',
-	];
-}
-
-export function assembleDirectorBooks(
-	directorModel: DirectorModel,
-	actressModel: ActressModel,
-	turnContext: TurnContext
-): { prompt: string; modules: string[] } {
-	const modules = getDirectorModules(directorModel, actressModel);
-	const parts = modules.map((f) => readModule('Director for Character', f));
-
-	let prompt = parts.join('\n\n');
-
-	// Fill Module 07 placeholders
-	prompt = prompt
-		.replace('{turn_number}', String(turnContext.turnNumber))
-		.replace('{timestamp}', turnContext.timestamp)
-		.replace('{stage}', turnContext.stage)
-		.replace('{inferred_pacing}', turnContext.pacing);
-
-	return { prompt, modules };
-}
-
-// === Actress Assembly ===
-// Assembly order: 01 → 02 → 03 → 05 (04 excluded: anti-prescription)
-// Swap rules: none currently
-
-export function getActressModules(): string[] {
-	return [
-		'01-core-identity.md',
-		'02-voice-and-tone.md',
-		'03-constraints.md',
-		// 04-character-sophie excluded: anti-prescription principle. Director controls backstory reveal.
-		'05-receiving-direction.md',
-	];
-}
-
-export function assembleActressBooks(): { prompt: string; modules: string[] } {
-	const modules = getActressModules();
-	const parts = modules.map((f) => readModule('Actress for Character', f));
-	return { prompt: parts.join('\n\n'), modules };
-}
-
-// === Cutter Assembly ===
-// Assembly order: 01 → 02 → 03 → 04 → 05 (→ 06 for Grok only, via json_schema param)
-// Swap rules: 01 by cutter model
-
-export function getCutterModules(cutterModel: DirectorModel): string[] {
-	return [
-		cutterModel === 'deepseek' ? '01-core-identity-deepseek.md' : '01-core-identity-grok.md',
-		'02-tier-1-extraction.md',
-		'03-tier-2-extraction.md',
-		'04-emotion-echo.md',
-		'05-rolling-arc.md',
-		// Module 06: DeepSeek skips (schema in 01). Grok uses json_schema param.
-	];
-}
-
-export function assembleCutterBooks(cutterModel: DirectorModel): { prompt: string; modules: string[] } {
-	const modules = getCutterModules(cutterModel);
-	const parts = modules.map((f) => readModule('Artisan Cutter', f));
-	return { prompt: parts.join('\n\n'), modules };
-}
-
-// === Director for User Assembly ===
-// Assembly order: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 10 → 11 (09 deprecated, skipped)
-// User-side mirror of Director for Character, adapted for user persona
-
-export function getUserDirectorModules(): string[] {
-	return [
-		'01-core-identity.md',
-		'02-output-format-deepseek.md',
-		'03-north-star.md',
-		'04-full-emotional-range.md',
-		'05-persona-marcus.md',
-		'06-actor-model-cydonia-v41.md',
-		'07-session-context.md',
-		'08-environment-injection.md',
-		'10-vulnerability-detection.md',
-		'11-failure-mode-countermeasures.md',
-	];
-}
-
-export function assembleUserDirectorBooks(
-	turnContext: TurnContext
-): { prompt: string; modules: string[] } {
-	const modules = getUserDirectorModules();
-	const parts = modules.map((f) => readModule('Director for User', f));
-
-	let prompt = parts.join('\n\n');
-
-	// Fill Module 07 placeholders
-	prompt = prompt
-		.replace('{turn_number}', String(turnContext.turnNumber))
-		.replace('{timestamp}', turnContext.timestamp)
-		.replace('{stage}', turnContext.stage)
-		.replace('{inferred_pacing}', turnContext.pacing);
-
-	return { prompt, modules };
-}
-
-// === Actor for User Assembly ===
-// Assembly order: 01 → 02 → 03 → 05 (mirrors Actress for Character, no Module 04 — anti-prescription)
-
-export function getActorForUserModules(): string[] {
-	return [
-		'01-core-identity.md',
-		'02-voice-and-tone.md',
-		'03-constraints.md',
-		'05-receiving-direction.md',
-	];
-}
-
-export function assembleActorForUserBooks(): { prompt: string; modules: string[] } {
-	const modules = getActorForUserModules();
-	const parts = modules.map((f) => readModule('Actor for User', f));
-	return { prompt: parts.join('\n\n'), modules };
-}
-
-// === Grok Response Format Schemas ===
-
-const useAnyOf = false;
-const nullable = (baseType: string) => useAnyOf
-	? { anyOf: [{ type: baseType }, { type: 'null' }] }
-	: { type: [baseType, 'null'] };
-
-const nullableArray = (itemType: string) => useAnyOf
-	? { anyOf: [{ type: 'array', items: { type: itemType } }, { type: 'null' }] }
-	: { type: ['array', 'null'], items: { type: itemType } };
-
-export const GROK_DIRECTOR_FORMAT = {
-	type: 'json_schema',
-	json_schema: {
-		name: 'director_output',
-		strict: true,
-		schema: {
-			type: 'object',
-			properties: {
-				direction: { type: 'string' },
-				environment: nullable('string'),
-				show_inner_voice: { type: 'boolean' },
-			},
-			required: ['direction', 'environment', 'show_inner_voice'],
-			additionalProperties: false,
+	return {
+		voiceBlock: sections['VOICE BLOCK'] ?? '',
+		canon: {
+			lifeFacts: sections['CANON -- life_facts'] ?? '',
+			backstory: sections['CANON -- backstory'] ?? '',
+			sensitivities: sections['CANON -- sensitivities'] ?? '',
+			wantsAndFears: sections['CANON -- wants_and_fears'] ?? '',
+			eroticSelf: sections['CANON -- erotic_self'] ?? '',
 		},
-	},
+		casting: sections['CASTING'] ?? '',
+		disclosureLine: extractDisclosureLine(sections['DISCLOSURE LINE'] ?? ''),
+		fallbackPool: extractFallbackLines(sections['FALLBACK POOL'] ?? ''),
+	};
+}
+
+function parseCharacterSections(text: string): Record<string, string> {
+	const sections: Record<string, string> = {};
+	const lines = text.split('\n');
+	let currentHeader: string | null = null;
+	let currentContent: string[] = [];
+
+	for (const line of lines) {
+		const headerMatch = line.match(/^## (.+)/);
+		if (headerMatch) {
+			if (currentHeader) {
+				sections[currentHeader] = currentContent.join('\n').trim();
+			}
+			currentHeader = headerMatch[1].trim();
+			currentContent = [];
+		} else if (currentHeader) {
+			currentContent.push(line);
+		}
+	}
+
+	if (currentHeader) {
+		sections[currentHeader] = currentContent.join('\n').trim();
+	}
+
+	return sections;
+}
+
+function extractDisclosureLine(section: string): string {
+	const lines = section.split('\n');
+	for (const line of lines) {
+		const trimmed = line.trim();
+		if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
+			return trimmed.slice(1, -1);
+		}
+		if (trimmed.startsWith('“') && trimmed.endsWith('”')) {
+			return trimmed.slice(1, -1);
+		}
+	}
+	return section.trim();
+}
+
+function extractFallbackLines(section: string): string[] {
+	return section
+		.split('\n')
+		.map(line => line.trim())
+		.filter(line => line.startsWith('- '))
+		.map(line => {
+			let text = line.slice(2).trim();
+			if (text.startsWith('"') && text.endsWith('"')) text = text.slice(1, -1);
+			if (text.startsWith('“') && text.endsWith('”')) text = text.slice(1, -1);
+			return text;
+		});
+}
+
+export function extractFirstTurnInsert(directorBookText: string): string {
+	const marker = '# SERVED INSERT: FIRST TURN';
+	const idx = directorBookText.indexOf(marker);
+	if (idx === -1) return '';
+
+	const afterMarker = directorBookText.slice(idx + marker.length);
+	const lines = afterMarker.split('\n');
+
+	const contentLines: string[] = [];
+	let started = false;
+
+	for (const line of lines) {
+		if (!started) {
+			if (line.trim() === '' || line.startsWith('#')) continue;
+			started = true;
+		}
+		if (started) {
+			if (line.startsWith('# ') && !line.startsWith('# SERVED')) break;
+			if (line === '---' && contentLines.length > 0) break;
+			contentLines.push(line);
+		}
+	}
+
+	return contentLines.join('\n').trim();
+}
+
+export type OnboardingState = {
+	hasName: boolean;
+	hasAlias: boolean;
+	userName?: string;
+	userAlias?: string;
 };
 
-export const GROK_CUTTER_FORMAT = {
-	type: 'json_schema',
-	json_schema: {
-		name: 'cutter_output',
-		strict: true,
-		schema: {
-			type: 'object',
-			properties: {
-				tier_1: {
-					...nullable('object'),
-					properties: {
-						his_real_life: nullableArray('string'),
-						her_promises: nullableArray('string'),
-						shared_history: nullableArray('string'),
-						his_preferences: nullableArray('string'),
-						his_inner_world: nullableArray('string'),
-						their_language: nullableArray('string'),
-					},
-					required: ['his_real_life', 'her_promises', 'shared_history', 'his_preferences', 'his_inner_world', 'their_language'],
-				},
-				tier_2: nullableArray('string'),
-				emotion_echo: { type: 'string' },
-				rolling_arc_update: { type: 'string' },
-				rolling_arc_summary: { type: 'string' },
-				arc_boundary: { type: 'boolean' },
-				closed_arc: nullable('string'),
-			},
-			required: ['tier_1', 'tier_2', 'emotion_echo', 'rolling_arc_update', 'rolling_arc_summary', 'arc_boundary', 'closed_arc'],
-			additionalProperties: false,
-		},
-	},
-};
-
-// === Model Parameters ===
-
-export const ACTRESS_PARAMS: Record<string, Record<string, number>> = {
-	'thedrummer/cydonia-24b-v4.1': {
-		temperature: 0.85, top_p: 0.95, min_p: 0.05,
-		repetition_penalty: 1.05, max_tokens: 320,
-	},
-	'nousresearch/hermes-3-llama-3.1-70b': {
-		temperature: 0.8, top_p: 0.95, top_k: 20,
-		repetition_penalty: 1.1, max_tokens: 320,
-	},
-};
-
-export const DIRECTOR_PARAMS: Record<string, Record<string, number>> = {
-	'deepseek/deepseek-v4-flash': { temperature: 0.3, top_p: 1.0, max_tokens: 500 },
-	'x-ai/grok-4.1-fast': { temperature: 0.3, top_p: 1.0, max_tokens: 500 },
-};
+export function buildIdentityHeader(characterName: string, onboarding: OnboardingState): string {
+	if (onboarding.hasName && onboarding.hasAlias) {
+		return `You are ${characterName}. You are talking to ${onboarding.userName}. He likes to be addressed as ${onboarding.userAlias}.`;
+	}
+	if (onboarding.hasName && !onboarding.hasAlias) {
+		return `You are ${characterName}. You are talking to ${onboarding.userName}.`;
+	}
+	if (!onboarding.hasName && onboarding.hasAlias) {
+		return `You are ${characterName}. You don't yet know his name, but he likes to be called ${onboarding.userAlias}.`;
+	}
+	return `You are ${characterName}. You don't yet know the name of the person you are talking to.`;
+}
