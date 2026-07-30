@@ -4,8 +4,7 @@ import { join } from 'path';
 const WIKI_DIR = '/Users/deepak-macmini/honeybloom/library/wiki';
 
 function wikiPath(prefix: string, filename: string): string {
-	const base = filename.replace(/\.md$/, '').replace(/-/g, ' ');
-	return join(WIKI_DIR, `${prefix} ${base}.md`);
+	return join(WIKI_DIR, prefix, filename);
 }
 
 function readModule(prefix: string, filename: string): string {
@@ -48,7 +47,7 @@ export function assembleDirectorBooks(
 	turnContext: TurnContext
 ): { prompt: string; modules: string[] } {
 	const modules = getDirectorModules(directorModel, actressModel);
-	const parts = modules.map((f) => readModule('Director for Character', f));
+	const parts = modules.map((f) => readModule('director-for-character', f));
 
 	let prompt = parts.join('\n\n');
 
@@ -78,7 +77,7 @@ export function getActressModules(): string[] {
 
 export function assembleActressBooks(): { prompt: string; modules: string[] } {
 	const modules = getActressModules();
-	const parts = modules.map((f) => readModule('Actress for Character', f));
+	const parts = modules.map((f) => readModule('actress-for-character', f));
 	return { prompt: parts.join('\n\n'), modules };
 }
 
@@ -99,7 +98,7 @@ export function getCutterModules(cutterModel: DirectorModel): string[] {
 
 export function assembleCutterBooks(cutterModel: DirectorModel): { prompt: string; modules: string[] } {
 	const modules = getCutterModules(cutterModel);
-	const parts = modules.map((f) => readModule('Artisan Cutter', f));
+	const parts = modules.map((f) => readModule('artisan-cutter', f));
 	return { prompt: parts.join('\n\n'), modules };
 }
 
@@ -126,7 +125,7 @@ export function assembleUserDirectorBooks(
 	turnContext: TurnContext
 ): { prompt: string; modules: string[] } {
 	const modules = getUserDirectorModules();
-	const parts = modules.map((f) => readModule('Director for User', f));
+	const parts = modules.map((f) => readModule('director-for-user', f));
 
 	let prompt = parts.join('\n\n');
 
@@ -154,7 +153,7 @@ export function getActorForUserModules(): string[] {
 
 export function assembleActorForUserBooks(): { prompt: string; modules: string[] } {
 	const modules = getActorForUserModules();
-	const parts = modules.map((f) => readModule('Actor for User', f));
+	const parts = modules.map((f) => readModule('actor-for-user', f));
 	return { prompt: parts.join('\n\n'), modules };
 }
 
@@ -222,8 +221,8 @@ export const GROK_CUTTER_FORMAT = {
 
 // === Model Parameters ===
 
-export const ACTRESS_PARAMS: Record<string, Record<string, number>> = {
-	'thedrummer/cydonia-24b-v4.1': {
+export const ACTRESS_PARAMS: Record<string, Record<string, number | string>> = {
+	'TheDrummer/Cydonia-24B-v4.1': {
 		temperature: 0.85, top_p: 0.95, min_p: 0.05,
 		repetition_penalty: 1.05, max_tokens: 320,
 	},
@@ -231,9 +230,13 @@ export const ACTRESS_PARAMS: Record<string, Record<string, number>> = {
 		temperature: 0.8, top_p: 0.95, top_k: 20,
 		repetition_penalty: 1.1, max_tokens: 320,
 	},
+	'nousresearch/hermes-4-70b': {
+		temperature: 0.8, top_p: 0.95, top_k: 20,
+		repetition_penalty: 1.1, max_tokens: 320,
+	},
 };
 
-export const DIRECTOR_PARAMS: Record<string, Record<string, number>> = {
-	'deepseek/deepseek-v4-flash': { temperature: 0.3, top_p: 1.0, max_tokens: 500 },
+export const DIRECTOR_PARAMS: Record<string, Record<string, number | string>> = {
+	'deepseek/deepseek-v4-flash': { temperature: 0.3, top_p: 1.0, max_tokens: 500, reasoning_effort: 'none' },
 	'x-ai/grok-4.1-fast': { temperature: 0.3, top_p: 1.0, max_tokens: 500 },
 };
