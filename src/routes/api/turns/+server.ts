@@ -49,16 +49,25 @@ export const GET: RequestHandler = async ({ url }) => {
 		}
 	}
 
-	// Add Klara reviews after each agent block
+	// Interleave Klara reviews after each agent block
 	for (const [turnNum, blocks] of turnMap) {
 		const reviews = getKlaraReviews(sessionId, turnNum);
-		for (const r of reviews) {
-			blocks.push({
-				type: 'klara',
-				sender: `Klara on ${r.stage}`,
-				content: r.review,
-			});
+		const reviewMap = new Map<string, string>();
+		for (const r of reviews) reviewMap.set(r.stage, r.review);
+
+		const interleaved: typeof blocks = [];
+		for (const block of blocks) {
+			interleaved.push(block);
+			const review = reviewMap.get(block.type);
+			if (review) {
+				interleaved.push({ type: 'klara', sender: `Klara on ${block.type}`, content: review });
+				reviewMap.delete(block.type);
+			}
 		}
+		for (const [stage, review] of reviewMap) {
+			interleaved.push({ type: 'klara', sender: `Klara on ${stage}`, content: review });
+		}
+		turnMap.set(turnNum, interleaved);
 	}
 
 	const turns = Array.from(turnMap.entries())
