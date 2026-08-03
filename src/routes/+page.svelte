@@ -661,7 +661,7 @@
 	}
 
 	.setting-group-label {
-		color: #666;
+		color: #888;
 		font-size: 9px;
 		text-transform: uppercase;
 		letter-spacing: 0.5px;
@@ -669,7 +669,7 @@
 	}
 
 	.setting-label {
-		color: #555;
+		color: #888;
 		font-size: 10px;
 		min-width: 60px;
 	}
@@ -678,7 +678,7 @@
 		flex: 1;
 		background: transparent;
 		border: none;
-		color: #E8E4DF;
+		color: #888;
 		font-size: 10px;
 		padding: 3px 0;
 		font-family: inherit;
