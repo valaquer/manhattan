@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getOrCreateSession, getAllMessages, getMemory } from '$lib/server/db';
+import { getOrCreateSession, getAllMessages, getMemory, getKlaraReviews } from '$lib/server/db';
 import db from '$lib/server/db';
 
 export const GET: RequestHandler = async ({ url }) => {
@@ -45,6 +45,18 @@ export const GET: RequestHandler = async ({ url }) => {
 				type: m.sender === 'Marcus' ? 'actor-for-user' : 'actress-for-character',
 				sender: m.sender === 'Marcus' ? 'Actor for User' : 'Actress for Character',
 				content: m.content,
+			});
+		}
+	}
+
+	// Add Klara reviews after each agent block
+	for (const [turnNum, blocks] of turnMap) {
+		const reviews = getKlaraReviews(sessionId, turnNum);
+		for (const r of reviews) {
+			blocks.push({
+				type: 'klara',
+				sender: `Klara on ${r.stage}`,
+				content: r.review,
 			});
 		}
 	}

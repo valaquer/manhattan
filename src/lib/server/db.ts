@@ -39,6 +39,16 @@ db.exec(`
 		FOREIGN KEY (session_id) REFERENCES sessions(id)
 	);
 
+	CREATE TABLE IF NOT EXISTS klara_reviews (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		session_id INTEGER NOT NULL,
+		turn_number INTEGER NOT NULL,
+		stage TEXT NOT NULL,
+		review TEXT NOT NULL,
+		created_at TEXT DEFAULT (datetime('now')),
+		FOREIGN KEY (session_id) REFERENCES sessions(id)
+	);
+
 	CREATE TABLE IF NOT EXISTS memory (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		session_id INTEGER NOT NULL,
@@ -138,6 +148,16 @@ export function getMemory(sessionId: number): Array<{ id: number; type: string; 
 
 export function getMemoryByType(sessionId: number, type: string): Array<{ id: number; content: string; turn_created: number; turn_updated: number }> {
 	return db.prepare('SELECT id, content, turn_created, turn_updated FROM memory WHERE session_id = ? AND type = ? AND (superseded = 0 OR superseded IS NULL) ORDER BY id').all(sessionId, type) as Array<{ id: number; content: string; turn_created: number; turn_updated: number }>;
+}
+
+// === Klara Review Queries ===
+
+export function saveKlaraReview(sessionId: number, turnNumber: number, stage: string, review: string): number {
+	return db.prepare('INSERT INTO klara_reviews (session_id, turn_number, stage, review) VALUES (?, ?, ?, ?)').run(sessionId, turnNumber, stage, review).lastInsertRowid as number;
+}
+
+export function getKlaraReviews(sessionId: number, turnNumber: number): Array<{ stage: string; review: string }> {
+	return db.prepare('SELECT stage, review FROM klara_reviews WHERE session_id = ? AND turn_number = ? ORDER BY id').all(sessionId, turnNumber) as Array<{ stage: string; review: string }>;
 }
 
 // === Session Management ===
