@@ -12,6 +12,7 @@
 		promptTokens?: number | null;
 		completionTokens?: number | null;
 		costUsd?: number | null;
+		model?: string;
 	}
 
 	interface Turn {
@@ -384,7 +385,7 @@
 			<button class="control-btn" onclick={toggleRetryInput} disabled={turns.length === 0 || isPlaying || isViewingOldSession} title="Retry"><RotateCcw size={14} /></button>
 			<button class="control-btn" onclick={resetAll} title="Restart All"><RotateCw size={14} /></button>
 			<span class="control-status">{isPlaying ? 'Running' : isPaused ? 'Paused' : 'Ready'}</span>
-			<span class="turn-counter">{turns.length > 0 ? `Turn ${currentTurnIndex + 1} / ${turns.length}` : 'No turns'}{sessionTotalCost > 0 ? ` · $${sessionTotalCost.toFixed(4)}` : sessionTotalTokens > 0 ? ` · ${sessionTotalTokens.toLocaleString()} tokens` : ''}</span>
+			<span class="turn-counter">{turns.length > 0 ? `Turn ${currentTurnIndex + 1} / ${turns.length}` : 'No turns'}{sessionTotalTokens > 0 ? ` · ${sessionTotalTokens.toLocaleString()} tokens` : ''}{sessionTotalCost > 0 ? ` · $${sessionTotalCost.toFixed(4)}` : ''}</span>
 		</div>
 
 		<!-- Retry feedback bar -->
@@ -412,20 +413,20 @@
 				<div class="turn-group">
 					<div class="turn-divider">
 						<span class="turn-number">Turn {turn.number}</span>
-						{#if turnCost > 0}
-							<span class="turn-cost">${turnCost.toFixed(4)}</span>
-						{:else if turnTokens > 0}
-							<span class="turn-cost">{turnTokens.toLocaleString()} tokens</span>
+						{#if turnTokens > 0}
+							<span class="turn-cost">{turnTokens.toLocaleString()} tokens{turnCost > 0 ? ` · $${turnCost.toFixed(4)}` : ''}</span>
 						{/if}
 					</div>
 					{#each turn.blocks as block}
 						<div class="turn-block" class:klara-block={block.type === 'klara'}>
 							<div class="block-label" style="color: {blockColor(block.type)};">
 								{blockLabel(block.type)}
-								{#if block.costUsd}
-									<div class="block-tokens">${block.costUsd.toFixed(4)}</div>
-								{:else if block.promptTokens || block.completionTokens}
-									<div class="block-tokens">{block.promptTokens ?? 0}→{block.completionTokens ?? 0}</div>
+								{#if block.model || block.promptTokens}
+									<div class="block-tokens">
+										{#if block.model}{block.model.split('/').pop()}{/if}
+										{#if block.promptTokens} · {(block.promptTokens ?? 0).toLocaleString()} in / {(block.completionTokens ?? 0).toLocaleString()} out{/if}
+										{#if block.costUsd} · ${block.costUsd.toFixed(4)}{/if}
+									</div>
 								{/if}
 							</div>
 							<div class="block-content" style="border-left: 2px solid {blockColor(block.type)};">

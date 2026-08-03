@@ -45,6 +45,7 @@ export const GET: RequestHandler = async ({ url }) => {
 			promptTokens: o.prompt_tokens,
 			completionTokens: o.completion_tokens,
 			costUsd,
+			model: o.model,
 		});
 	}
 
