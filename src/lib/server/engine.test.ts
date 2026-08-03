@@ -25,8 +25,8 @@ vi.mock('$lib/server/db', () => ({
 
 // Mock OpenRouter
 vi.mock('$lib/server/openrouter', () => ({
-	callModel: vi.fn(async () => '{"world":null,"scene":{"read":"test direction"},"checks":[],"strategy":"test env"}'),
-	streamModel: vi.fn(async function* () { yield 'Hello '; yield 'world.'; }),
+	callModel: vi.fn(async () => ({ content: '{"world":null,"scene":{"read":"test direction"},"checks":[],"strategy":"test env"}', usage: { prompt_tokens: 100, completion_tokens: 50, total_tokens: 150 } })),
+	streamModelBuffered: vi.fn(async () => ({ content: 'Hello world.', usage: { prompt_tokens: 200, completion_tokens: 80, total_tokens: 280 } })),
 }));
 
 import { runPipeline } from './engine';

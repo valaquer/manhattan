@@ -11,6 +11,7 @@ db.pragma('foreign_keys = ON');
 db.exec(`
 	CREATE TABLE IF NOT EXISTS sessions (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		config TEXT,
 		created_at TEXT DEFAULT (datetime('now'))
 	);
 
@@ -31,6 +32,9 @@ db.exec(`
 		stage TEXT NOT NULL,
 		model TEXT NOT NULL,
 		content TEXT NOT NULL,
+		prompt_tokens INTEGER,
+		completion_tokens INTEGER,
+		model_params TEXT,
 		created_at TEXT DEFAULT (datetime('now')),
 		FOREIGN KEY (session_id) REFERENCES sessions(id)
 	);
@@ -46,9 +50,26 @@ db.exec(`
 	);
 `);
 
+// === Migrations for existing DBs ===
+function migrateSchema() {
+	const cols = db.prepare("PRAGMA table_info(pipeline_outputs)").all() as Array<{ name: string }>;
+	const colNames = new Set(cols.map(c => c.name));
+	if (!colNames.has('prompt_tokens')) db.exec('ALTER TABLE pipeline_outputs ADD COLUMN prompt_tokens INTEGER');
+	if (!colNames.has('completion_tokens')) db.exec('ALTER TABLE pipeline_outputs ADD COLUMN completion_tokens INTEGER');
+	if (!colNames.has('model_params')) db.exec('ALTER TABLE pipeline_outputs ADD COLUMN model_params TEXT');
+
+	const sessionCols = db.prepare("PRAGMA table_info(sessions)").all() as Array<{ name: string }>;
+	const sessionColNames = new Set(sessionCols.map(c => c.name));
+	if (!sessionColNames.has('config')) db.exec('ALTER TABLE sessions ADD COLUMN config TEXT');
+}
+migrateSchema();
+
 // === Session Queries ===
 
-export function createSession(): number {
+export function createSession(config?: string): number {
+	if (config) {
+		return db.prepare('INSERT INTO sessions (config) VALUES (?)').run(config).lastInsertRowid as number;
+	}
 	return db.prepare('INSERT INTO sessions DEFAULT VALUES').run().lastInsertRowid as number;
 }
 
@@ -78,8 +99,13 @@ export function getAllMessages(sessionId: number): Array<{ sender: string; conte
 
 // === Pipeline Output Queries (forensic log) ===
 
-export function savePipelineOutput(sessionId: number, turnNumber: number, stage: string, model: string, content: string): number {
-	return db.prepare('INSERT INTO pipeline_outputs (session_id, turn_number, stage, model, content) VALUES (?, ?, ?, ?, ?)').run(sessionId, turnNumber, stage, model, content).lastInsertRowid as number;
+export function savePipelineOutput(
+	sessionId: number, turnNumber: number, stage: string, model: string, content: string,
+	promptTokens?: number, completionTokens?: number, modelParams?: string,
+): number {
+	return db.prepare(
+		'INSERT INTO pipeline_outputs (session_id, turn_number, stage, model, content, prompt_tokens, completion_tokens, model_params) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+	).run(sessionId, turnNumber, stage, model, content, promptTokens ?? null, completionTokens ?? null, modelParams ?? null).lastInsertRowid as number;
 }
 
 // === Memory Queries (Cutter extractions — living state) ===

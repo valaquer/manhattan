@@ -14,6 +14,18 @@ interface ModelParams {
 	min_p?: number;
 	repetition_penalty?: number;
 	max_tokens?: number;
+	reasoning_effort?: string;
+}
+
+export interface Usage {
+	prompt_tokens: number;
+	completion_tokens: number;
+	total_tokens: number;
+}
+
+export interface ModelResult {
+	content: string;
+	usage: Usage | null;
 }
 
 export async function callModel(
@@ -21,7 +33,7 @@ export async function callModel(
 	systemPrompt: string,
 	messages: Message[],
 	params: ModelParams = {}
-): Promise<string> {
+): Promise<ModelResult> {
 	const res = await fetch(API_URL, {
 		method: 'POST',
 		headers: {
@@ -42,15 +54,25 @@ export async function callModel(
 	}
 
 	const data = await res.json();
-	return data.choices[0].message.content;
+	const usage: Usage | null = data.usage ? {
+		prompt_tokens: data.usage.prompt_tokens ?? 0,
+		completion_tokens: data.usage.completion_tokens ?? 0,
+		total_tokens: data.usage.total_tokens ?? 0,
+	} : null;
+	return { content: data.choices[0].message.content, usage };
 }
 
-export async function* streamModel(
+export interface StreamResult {
+	content: string;
+	usage: Usage | null;
+}
+
+export async function streamModelBuffered(
 	model: string,
 	systemPrompt: string,
 	messages: Message[],
 	params: ModelParams = {}
-): AsyncGenerator<string> {
+): Promise<StreamResult> {
 	const res = await fetch(API_URL, {
 		method: 'POST',
 		headers: {
@@ -73,6 +95,8 @@ export async function* streamModel(
 	const reader = res.body!.getReader();
 	const decoder = new TextDecoder();
 	let buffer = '';
+	let content = '';
+	let usage: Usage | null = null;
 
 	while (true) {
 		const { done, value } = await reader.read();
@@ -85,17 +109,26 @@ export async function* streamModel(
 		for (const line of lines) {
 			if (!line.startsWith('data: ')) continue;
 			const payload = line.slice(6).trim();
-			if (payload === '[DONE]') return;
+			if (payload === '[DONE]') continue;
 
 			try {
 				const chunk = JSON.parse(payload);
 				const delta = chunk.choices?.[0]?.delta?.content;
-				if (delta) yield delta;
+				if (delta) content += delta;
+				if (chunk.usage) {
+					usage = {
+						prompt_tokens: chunk.usage.prompt_tokens ?? 0,
+						completion_tokens: chunk.usage.completion_tokens ?? 0,
+						total_tokens: chunk.usage.total_tokens ?? 0,
+					};
+				}
 			} catch {
 				// skip malformed chunks
 			}
 		}
 	}
+
+	return { content: content.trim(), usage };
 }
 
 export function parseJsonFromText(text: string): unknown {

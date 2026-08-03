@@ -15,7 +15,8 @@ import {
 	buildIdentityHeader,
 } from '$lib/server/books';
 import type { AgentRole, CharacterName, OnboardingState } from '$lib/server/books';
-import { callModel, streamModel } from '$lib/server/openrouter';
+import { callModel, streamModelBuffered } from '$lib/server/openrouter';
+import type { Usage } from '$lib/server/openrouter';
 import {
 	formatTranscript,
 	formatMemoryContext,
@@ -169,19 +170,21 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 			const dirUserMerge = mergeForDirectorUser(ctx);
 			allMeta['director-user'] = dirUserMerge.meta;
 
-			const dirUserRaw = await callModel(
+			const dirUserParams = DIRECTOR_PARAMS[models.director] || {};
+			const dirUserCall = await callModel(
 				models.director,
 				dirUserPrompt,
 				[{ role: 'user', content: dirUserMerge.value }],
-				DIRECTOR_PARAMS[models.director] || {},
+				dirUserParams,
 			);
 
-			const dirUserResult = parseDirectorOutput(dirUserRaw);
+			const dirUserResult = parseDirectorOutput(dirUserCall.content);
 			const dirUserContent = dirUserResult.refused
 				? `[REFUSED] ${dirUserResult.raw}`
 				: JSON.stringify({ world: dirUserResult.world, scene: dirUserResult.scene, checks: dirUserResult.checks, strategy: dirUserResult.strategy }, null, 2);
 
-			savePipelineOutput(sessionId, turnNumber, 'director-for-user', models.director, dirUserContent);
+			savePipelineOutput(sessionId, turnNumber, 'director-for-user', models.director, dirUserContent,
+				dirUserCall.usage?.prompt_tokens, dirUserCall.usage?.completion_tokens, JSON.stringify(dirUserParams));
 			yield { type: 'stage', stage: 'director-for-user', content: dirUserContent, model: models.director, meta: dirUserMerge.meta };
 
 			if (dirUserResult.refused) {
@@ -199,16 +202,18 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 			}
 
 			const actorPrompt = assembleSystemPrompt('actor-user', config.characterName, models);
-			const actorRaw = await callModel(
+			const actorParams = ACTRESS_PARAMS[models.actress] || {};
+			const actorCall = await callModel(
 				models.actress,
 				actorPrompt,
 				[{ role: 'user', content: actorMerge.value as string }],
-				ACTRESS_PARAMS[models.actress] || {},
+				actorParams,
 			);
 
-			userMessage = actorRaw.trim();
+			userMessage = actorCall.content.trim();
 			saveMessage(sessionId, turnNumber, 'Marcus', userMessage);
-			savePipelineOutput(sessionId, turnNumber, 'actor-for-user', models.actress, userMessage);
+			savePipelineOutput(sessionId, turnNumber, 'actor-for-user', models.actress, userMessage,
+				actorCall.usage?.prompt_tokens, actorCall.usage?.completion_tokens, JSON.stringify(actorParams));
 			yield { type: 'stage', stage: 'actor-for-user', content: userMessage, model: models.actress, meta: actorMerge.meta };
 			allMeta['actor-for-user'] = actorMerge.meta;
 		}
@@ -241,19 +246,21 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 			? directorMerge.value + '\n\n' + directorTrayAddition
 			: directorMerge.value;
 
-		const directorRaw = await callModel(
+		const dirCharParams = DIRECTOR_PARAMS[models.director] || {};
+		const dirCharCall = await callModel(
 			models.director,
 			directorPrompt,
 			[{ role: 'user', content: directorUserContent }],
-			DIRECTOR_PARAMS[models.director] || {},
+			dirCharParams,
 		);
 
-		const directorResult = parseDirectorOutput(directorRaw);
+		const directorResult = parseDirectorOutput(dirCharCall.content);
 		const directorContent = directorResult.refused
 			? `[REFUSED] ${directorResult.raw}`
 			: JSON.stringify({ world: directorResult.world, scene: directorResult.scene, checks: directorResult.checks, strategy: directorResult.strategy }, null, 2);
 
-		savePipelineOutput(sessionId, turnNumber, 'director-for-character', models.director, directorContent);
+		savePipelineOutput(sessionId, turnNumber, 'director-for-character', models.director, directorContent,
+			dirCharCall.usage?.prompt_tokens, dirCharCall.usage?.completion_tokens, JSON.stringify(dirCharParams));
 		yield { type: 'stage', stage: 'director-for-character', content: directorContent, model: models.director, meta: directorMerge.meta };
 
 		if (directorResult.refused) {
@@ -285,9 +292,14 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 			actressMerge.value as string,
 		].filter(Boolean).join('\n\n');
 
-		let characterResponse = await generateActressBuffered(
-			models.actress, actressSystemPrompt, actressUserContent,
+		const actressParams = ACTRESS_PARAMS[models.actress] || {};
+		const actressResult = await streamModelBuffered(
+			models.actress, actressSystemPrompt,
+			[{ role: 'user', content: actressUserContent }],
+			actressParams,
 		);
+		let characterResponse = actressResult.content;
+		let actressUsage: Usage | null = actressResult.usage;
 
 		allMeta['actress'] = actressMerge.meta;
 
@@ -298,15 +310,16 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 		try {
 			const reviewerPrompt = assembleSystemPrompt('reviewer', config.characterName, models);
 			const reviewInput = buildReviewerInput(characterResponse, directorContent, actressDialogue, sheet);
+			const reviewerParams = DIRECTOR_PARAMS[models.reviewer] || {};
 
-			const reviewRaw = await callModel(
+			const reviewCall = await callModel(
 				models.reviewer,
 				reviewerPrompt,
 				[{ role: 'user', content: reviewInput }],
-				DIRECTOR_PARAMS[models.reviewer] || {},
+				reviewerParams,
 			);
 
-			const verdict = parseReviewerVerdict(reviewRaw);
+			const verdict = parseReviewerVerdict(reviewCall.content);
 			reviewAttempt = 1;
 
 			if (verdict.verdict === 'pass' || verdict.verdict === 'edit') {
@@ -319,12 +332,12 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 				let retryDirection = actressMerge.value as string;
 				if (verdict.fault === 'brief') {
 					// Re-run Director
-					const dirRetryRaw = await callModel(
+					const dirRetryCall = await callModel(
 						models.director, directorPrompt,
 						[{ role: 'user', content: directorUserContent }],
-						DIRECTOR_PARAMS[models.director] || {},
+						dirCharParams,
 					);
-					const dirRetryResult = parseDirectorOutput(dirRetryRaw);
+					const dirRetryResult = parseDirectorOutput(dirRetryCall.content);
 					if (!dirRetryResult.refused) {
 						const dirRetryMerge = mergeDirectorToPerformer(dirRetryResult);
 						if (typeof dirRetryMerge.value === 'string') retryDirection = dirRetryMerge.value;
@@ -334,20 +347,23 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 				}
 
 				// Re-run Actress
-				characterResponse = await generateActressBuffered(
+				const retryActress = await streamModelBuffered(
 					models.actress, actressSystemPrompt,
-					actressDialogue ? actressDialogue + '\n\n' + retryDirection : retryDirection,
+					[{ role: 'user', content: actressDialogue ? actressDialogue + '\n\n' + retryDirection : retryDirection }],
+					actressParams,
 				);
+				characterResponse = retryActress.content;
+				actressUsage = retryActress.usage;
 
 				// Second review
 				const review2Input = buildReviewerInput(characterResponse, directorContent, actressDialogue, sheet, true);
-				const review2Raw = await callModel(
+				const review2Call = await callModel(
 					models.reviewer, reviewerPrompt,
 					[{ role: 'user', content: review2Input }],
-					DIRECTOR_PARAMS[models.reviewer] || {},
+					reviewerParams,
 				);
 
-				const verdict2 = parseReviewerVerdict(review2Raw);
+				const verdict2 = parseReviewerVerdict(review2Call.content);
 				reviewAttempt = 2;
 
 				if (verdict2.verdict === 'pass' || verdict2.verdict === 'edit') {
@@ -370,7 +386,8 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 
 		// Save final response
 		saveMessage(sessionId, turnNumber, config.characterName, characterResponse);
-		savePipelineOutput(sessionId, turnNumber, 'actress-for-character', models.actress, characterResponse);
+		savePipelineOutput(sessionId, turnNumber, 'actress-for-character', models.actress, characterResponse,
+			actressUsage?.prompt_tokens, actressUsage?.completion_tokens, JSON.stringify(actressParams));
 		yield {
 			type: 'stage', stage: 'actress-for-character', content: characterResponse,
 			model: models.actress, meta: actressMerge.meta,
@@ -382,12 +399,14 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 			const cutterPrompt = assembleSystemPrompt('cutter', config.characterName, models);
 			const cutterMerge = mergeForCutter(memoryContext, userMessage || '', characterResponse);
 			allMeta['cutter'] = cutterMerge.meta;
+			const cutterParams = DIRECTOR_PARAMS[models.cutter] || {};
 
-			const cutterRaw = await callModel(
+			const cutterCall = await callModel(
 				models.cutter, cutterPrompt,
 				[{ role: 'user', content: cutterMerge.value }],
-				DIRECTOR_PARAMS[models.cutter] || {},
+				cutterParams,
 			);
+			const cutterRaw = cutterCall.content;
 
 			const cutterResult = parseCutterOutput(cutterRaw);
 			let cutterContent: string;
@@ -413,7 +432,8 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 				cutterContent = cutterResult.raw || '[no output]';
 			}
 
-			savePipelineOutput(sessionId, turnNumber, 'artisan-cutter', models.cutter, cutterContent);
+			savePipelineOutput(sessionId, turnNumber, 'artisan-cutter', models.cutter, cutterContent,
+				cutterCall.usage?.prompt_tokens, cutterCall.usage?.completion_tokens, JSON.stringify(cutterParams));
 			yield { type: 'stage', stage: 'artisan-cutter', content: cutterContent, model: models.cutter, meta: cutterMerge.meta };
 		} catch (cutterErr) {
 			const errMsg = cutterErr instanceof Error ? cutterErr.message : String(cutterErr);
@@ -435,22 +455,6 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 }
 
 // --- Helpers ---
-
-async function generateActressBuffered(
-	model: string,
-	systemPrompt: string,
-	userContent: string,
-): Promise<string> {
-	let buffer = '';
-	for await (const chunk of streamModel(
-		model, systemPrompt,
-		[{ role: 'user', content: userContent }],
-		ACTRESS_PARAMS[model] || {},
-	)) {
-		buffer += chunk;
-	}
-	return buffer.trim();
-}
 
 interface ReviewerVerdict {
 	verdict: 'pass' | 'reject' | 'edit';
