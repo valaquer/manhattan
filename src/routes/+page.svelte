@@ -400,8 +400,8 @@
 				<div class="empty-state">Press Play to begin.</div>
 			{:else}
 				{@const turn = turns[currentTurnIndex]}
+				{@const turnTokens = turn.blocks.reduce((sum, b) => sum + (b.promptTokens ?? 0) + (b.completionTokens ?? 0), 0)}
 				<div class="turn-group">
-					{@const turnTokens = turn.blocks.reduce((sum, b) => sum + (b.promptTokens ?? 0) + (b.completionTokens ?? 0), 0)}
 					<div class="turn-divider">
 						<span class="turn-number">Turn {turn.number}</span>
 						{#if turnTokens > 0}
