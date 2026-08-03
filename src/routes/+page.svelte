@@ -325,14 +325,29 @@
 				</button>
 				{#if showSettings}
 					<div class="settings-panel">
-						<label class="setting-row">
-							<span class="setting-label">Director</span>
-							<input class="setting-input" bind:value={directorModel} />
-						</label>
+						<div class="setting-group">
+							<div class="setting-group-label">Director · Reviewer · Cutter</div>
 							<label class="setting-row">
-							<span class="setting-label">Actress</span>
-							<input class="setting-input" bind:value={actressModel} />
-						</label>
+								<span class="setting-label">Model</span>
+								<input class="setting-input" bind:value={directorModel} />
+							</label>
+							<label class="setting-row">
+								<span class="setting-label">Reasoning</span>
+								<select class="setting-input" bind:value={reasoningEffort}>
+									<option value="none">none</option>
+									<option value="low">low</option>
+									<option value="medium">medium</option>
+									<option value="high">high</option>
+								</select>
+							</label>
+						</div>
+						<div class="setting-group">
+							<div class="setting-group-label">Actress · Actor</div>
+							<label class="setting-row">
+								<span class="setting-label">Model</span>
+								<input class="setting-input" bind:value={actressModel} />
+							</label>
+						</div>
 					</div>
 				{/if}
 			</div>
@@ -639,6 +654,18 @@
 		display: flex;
 		align-items: center;
 		gap: 8px;
+	}
+
+	.setting-group {
+		margin-bottom: 10px;
+	}
+
+	.setting-group-label {
+		color: #666;
+		font-size: 9px;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		margin-bottom: 4px;
 	}
 
 	.setting-label {
