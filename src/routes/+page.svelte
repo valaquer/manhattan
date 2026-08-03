@@ -30,6 +30,7 @@
 	let activeSessionId = $state<number | null>(null);
 	let latestSessionId = $state<number | null>(null);
 	let isViewingOldSession = $derived(activeSessionId !== null && latestSessionId !== null && activeSessionId !== latestSessionId);
+	let sessionTotalTokens = $derived(turns.reduce((total, t) => total + t.blocks.reduce((sum, b) => sum + (b.promptTokens ?? 0) + (b.completionTokens ?? 0), 0), 0));
 
 	// === Model settings ===
 	let directorModel = $state('deepseek/deepseek-v4-flash');
@@ -377,7 +378,7 @@
 			<button class="control-btn" onclick={toggleRetryInput} disabled={turns.length === 0 || isPlaying || isViewingOldSession} title="Retry"><RotateCcw size={14} /></button>
 			<button class="control-btn" onclick={resetAll} title="Restart All"><RotateCw size={14} /></button>
 			<span class="control-status">{isPlaying ? 'Running' : isPaused ? 'Paused' : 'Ready'}</span>
-			<span class="turn-counter">{turns.length > 0 ? `Turn ${currentTurnIndex + 1} / ${turns.length}` : 'No turns'}</span>
+			<span class="turn-counter">{turns.length > 0 ? `Turn ${currentTurnIndex + 1} / ${turns.length}` : 'No turns'}{sessionTotalTokens > 0 ? ` · ${sessionTotalTokens.toLocaleString()} tokens` : ''}</span>
 		</div>
 
 		<!-- Retry feedback bar -->
