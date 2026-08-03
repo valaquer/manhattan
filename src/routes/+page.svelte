@@ -46,9 +46,6 @@
 
 	onMount(() => {
 		loadTurns();
-
-
-		return () => klaraSource.close();
 	});
 
 	// === Run pipeline ===
@@ -130,7 +127,11 @@
 
 	// === Reset ===
 	async function resetAll() {
-		await fetch('/api/reset', { method: 'POST' });
+		const res = await fetch('/api/reset', { method: 'POST' });
+		if (res.ok) {
+			const data = await res.json();
+			console.log('New session:', data.sessionId);
+		}
 		turns = [];
 		currentTurnIndex = 0;
 	}

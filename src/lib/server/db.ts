@@ -102,11 +102,8 @@ export function getMemoryByType(sessionId: number, type: string): Array<{ id: nu
 
 // === Session Management ===
 
-export function deleteSession(sessionId: number): void {
-	db.prepare('DELETE FROM memory WHERE session_id = ?').run(sessionId);
-	db.prepare('DELETE FROM pipeline_outputs WHERE session_id = ?').run(sessionId);
-	db.prepare('DELETE FROM messages WHERE session_id = ?').run(sessionId);
-	db.prepare('DELETE FROM sessions WHERE id = ?').run(sessionId);
+export function getAllSessions(): Array<{ id: number; created_at: string }> {
+	return db.prepare('SELECT id, created_at FROM sessions ORDER BY id DESC').all() as Array<{ id: number; created_at: string }>;
 }
 
 export default db;
