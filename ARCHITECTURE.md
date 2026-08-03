@@ -108,7 +108,7 @@ Touches: engine.ts only. Zero framework dependencies -- designed to port to Prag
 Touches: engine.ts only. External API calls to OpenRouter. `callModel()` returns `{ content, usage }` with token counts. `streamModelBuffered()` captures usage from SSE stream. Changes affect model selection, retry behavior, and cost recording.
 
 ### db.ts
-Touches: pipeline (write), turns (read), reset (write), session browser (read). 3-table schema: messages, pipeline_outputs, memory. Sessions table tracks conversation runs. No data deletion -- reset creates a new session, old data preserved.
+Touches: pipeline (write), turns (read), reset (write), session browser (read). 3-table schema: messages, pipeline_outputs, memory. Sessions table tracks conversation runs. No data deletion -- reset creates a new session, old data preserved. Retry uses attempt column (pipeline_outputs, memory) and superseded flag (memory) to preserve original outputs while updating to new takes.
 
 ### Wiki book files (external)
 Touches: books.ts reads at runtime. Hana's team maintains. Changes to book structure or character sheet headers can break the pipeline silently.
