@@ -88,7 +88,7 @@ const ACTRESS_PARAMS: Record<string, Record<string, number | string>> = {
 };
 
 const DIRECTOR_PARAMS: Record<string, Record<string, number | string>> = {
-	'deepseek/deepseek-v4-flash-0731': { temperature: 0.3, top_p: 1.0, max_tokens: 500, reasoning_effort: 'none' },
+	'deepseek/deepseek-v4-flash-0731': { temperature: 0.3, top_p: 1.0, max_tokens: 2000, reasoning_effort: 'none' },
 };
 
 // --- Pipeline Events ---
@@ -337,6 +337,8 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 			);
 
 			const verdict = parseReviewerVerdict(reviewCall.content);
+			savePipelineOutput(sessionId, turnNumber, 'reviewer', models.reviewer, reviewCall.content,
+				reviewCall.usage?.prompt_tokens, reviewCall.usage?.completion_tokens, JSON.stringify(reviewerParams), attempt);
 			reviewAttempt = 1;
 
 			if (verdict.verdict === 'pass' || verdict.verdict === 'edit') {

@@ -263,6 +263,7 @@
 			case 'director-for-character': case 'director': return '#888';
 			case 'actress-for-character': case 'actress': return '#AE0D46';
 			case 'artisan-cutter': case 'cutter': return '#888';
+			case 'reviewer': return '#888';
 			case 'klara': return '#b0aba5';
 			default: return '#888';
 		}
@@ -279,13 +280,14 @@
 			case 'actress': return 'ACTRESS FOR CHARACTER';
 			case 'artisan-cutter': return 'ARTISAN CUTTER';
 			case 'cutter': return 'ARTISAN CUTTER';
+			case 'reviewer': return 'REVIEWER';
 			case 'klara': return 'KLARA';
 			default: return type.toUpperCase().replace(/_/g, ' ');
 		}
 	}
 
 	function isJson(type: string): boolean {
-		return type === 'director' || type === 'cutter' || type === 'director-for-user' || type === 'director-for-character' || type === 'artisan-cutter';
+		return type === 'director' || type === 'cutter' || type === 'director-for-user' || type === 'director-for-character' || type === 'artisan-cutter' || type === 'reviewer';
 	}
 </script>
 
