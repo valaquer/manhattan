@@ -330,10 +330,6 @@
 							<input class="setting-input" bind:value={directorModel} />
 						</label>
 						<label class="setting-row">
-							<span class="setting-label">Actress</span>
-							<input class="setting-input" bind:value={actressModel} />
-						</label>
-						<label class="setting-row">
 							<span class="setting-label">Reasoning</span>
 							<select class="setting-input" bind:value={reasoningEffort}>
 								<option value="none">none</option>
@@ -341,6 +337,10 @@
 								<option value="medium">medium</option>
 								<option value="high">high</option>
 							</select>
+						</label>
+						<label class="setting-row">
+							<span class="setting-label">Actress</span>
+							<input class="setting-input" bind:value={actressModel} />
 						</label>
 					</div>
 				{/if}
