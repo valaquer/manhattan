@@ -423,9 +423,9 @@
 								{blockLabel(block.type)}
 								{#if block.model || block.promptTokens}
 									<div class="block-tokens">
-										{#if block.model}{block.model.split('/').pop()}{/if}
-										{#if block.promptTokens} · {(block.promptTokens ?? 0).toLocaleString()} in / {(block.completionTokens ?? 0).toLocaleString()} out{/if}
-										{#if block.costUsd} · ${block.costUsd.toFixed(4)}{/if}
+										{#if block.model}<div>{block.model.split('/').pop()}</div>{/if}
+										{#if block.promptTokens}<div>{(block.promptTokens ?? 0).toLocaleString()} in / {(block.completionTokens ?? 0).toLocaleString()} out</div>{/if}
+										{#if block.costUsd}<div>${block.costUsd.toFixed(4)}</div>{/if}
 									</div>
 								{/if}
 							</div>
