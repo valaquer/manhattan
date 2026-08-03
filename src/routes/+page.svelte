@@ -11,6 +11,7 @@
 		meta?: Record<string, unknown>;
 		promptTokens?: number | null;
 		completionTokens?: number | null;
+		costUsd?: number | null;
 	}
 
 	interface Turn {
@@ -31,6 +32,7 @@
 	let latestSessionId = $state<number | null>(null);
 	let isViewingOldSession = $derived(activeSessionId !== null && latestSessionId !== null && activeSessionId !== latestSessionId);
 	let sessionTotalTokens = $derived(turns.reduce((total, t) => total + t.blocks.reduce((sum, b) => sum + (b.promptTokens ?? 0) + (b.completionTokens ?? 0), 0), 0));
+	let sessionTotalCost = $derived(turns.reduce((total, t) => total + t.blocks.reduce((sum, b) => sum + (b.costUsd ?? 0), 0), 0));
 
 	// === Model settings ===
 	let directorModel = $state('deepseek/deepseek-v4-flash-0731');
@@ -382,7 +384,7 @@
 			<button class="control-btn" onclick={toggleRetryInput} disabled={turns.length === 0 || isPlaying || isViewingOldSession} title="Retry"><RotateCcw size={14} /></button>
 			<button class="control-btn" onclick={resetAll} title="Restart All"><RotateCw size={14} /></button>
 			<span class="control-status">{isPlaying ? 'Running' : isPaused ? 'Paused' : 'Ready'}</span>
-			<span class="turn-counter">{turns.length > 0 ? `Turn ${currentTurnIndex + 1} / ${turns.length}` : 'No turns'}{sessionTotalTokens > 0 ? ` · ${sessionTotalTokens.toLocaleString()} tokens` : ''}</span>
+			<span class="turn-counter">{turns.length > 0 ? `Turn ${currentTurnIndex + 1} / ${turns.length}` : 'No turns'}{sessionTotalCost > 0 ? ` · $${sessionTotalCost.toFixed(4)}` : sessionTotalTokens > 0 ? ` · ${sessionTotalTokens.toLocaleString()} tokens` : ''}</span>
 		</div>
 
 		<!-- Retry feedback bar -->
@@ -406,10 +408,13 @@
 			{:else}
 				{@const turn = turns[currentTurnIndex]}
 				{@const turnTokens = turn.blocks.reduce((sum, b) => sum + (b.promptTokens ?? 0) + (b.completionTokens ?? 0), 0)}
+			{@const turnCost = turn.blocks.reduce((sum, b) => sum + (b.costUsd ?? 0), 0)}
 				<div class="turn-group">
 					<div class="turn-divider">
 						<span class="turn-number">Turn {turn.number}</span>
-						{#if turnTokens > 0}
+						{#if turnCost > 0}
+							<span class="turn-cost">${turnCost.toFixed(4)}</span>
+						{:else if turnTokens > 0}
 							<span class="turn-cost">{turnTokens.toLocaleString()} tokens</span>
 						{/if}
 					</div>
@@ -417,7 +422,9 @@
 						<div class="turn-block" class:klara-block={block.type === 'klara'}>
 							<div class="block-label" style="color: {blockColor(block.type)};">
 								{blockLabel(block.type)}
-								{#if block.promptTokens || block.completionTokens}
+								{#if block.costUsd}
+									<div class="block-tokens">${block.costUsd.toFixed(4)}</div>
+								{:else if block.promptTokens || block.completionTokens}
 									<div class="block-tokens">{block.promptTokens ?? 0}→{block.completionTokens ?? 0}</div>
 								{/if}
 							</div>

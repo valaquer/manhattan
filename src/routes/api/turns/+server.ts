@@ -7,10 +7,16 @@ export const GET: RequestHandler = async ({ url }) => {
 	const requestedSession = url.searchParams.get('sessionId');
 	const sessionId = requestedSession ? parseInt(requestedSession, 10) : getOrCreateSession();
 
+	const MODEL_PRICING: Record<string, { input: number; output: number }> = {
+		'deepseek/deepseek-v4-flash-0731': { input: 0.09, output: 0.18 },
+		'deepseek/deepseek-v4-flash': { input: 0.09, output: 0.18 },
+		'nousresearch/hermes-4-70b': { input: 0.13, output: 0.40 },
+	};
+
 	// Get all pipeline outputs grouped by turn
 	const outputs = db.prepare(
-		'SELECT turn_number, stage, content, prompt_tokens, completion_tokens, model_params FROM pipeline_outputs WHERE session_id = ? ORDER BY id'
-	).all(sessionId) as Array<{ turn_number: number; stage: string; content: string; prompt_tokens: number | null; completion_tokens: number | null; model_params: string | null }>;
+		'SELECT turn_number, stage, model, content, prompt_tokens, completion_tokens, model_params FROM pipeline_outputs WHERE session_id = ? ORDER BY id'
+	).all(sessionId) as Array<{ turn_number: number; stage: string; model: string; content: string; prompt_tokens: number | null; completion_tokens: number | null; model_params: string | null }>;
 
 	// Get all messages
 	const messages = getAllMessages(sessionId);
@@ -28,12 +34,17 @@ export const GET: RequestHandler = async ({ url }) => {
 			'actress-for-character': 'Actress for Character',
 			'artisan-cutter': 'Artisan Cutter',
 		};
+		const pricing = MODEL_PRICING[o.model];
+		const costUsd = pricing && o.prompt_tokens && o.completion_tokens
+			? (o.prompt_tokens * pricing.input + o.completion_tokens * pricing.output) / 1_000_000
+			: null;
 		turnMap.get(o.turn_number)!.push({
 			type: o.stage,
 			sender: senderMap[o.stage] || o.stage,
 			content: o.content,
 			promptTokens: o.prompt_tokens,
 			completionTokens: o.completion_tokens,
+			costUsd,
 		});
 	}
 
