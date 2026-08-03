@@ -336,9 +336,9 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 				reviewerParams,
 			);
 
-			const verdict = parseReviewerVerdict(reviewCall.content);
 			savePipelineOutput(sessionId, turnNumber, 'reviewer', models.reviewer, reviewCall.content,
 				reviewCall.usage?.prompt_tokens, reviewCall.usage?.completion_tokens, JSON.stringify(reviewerParams), attempt);
+			const verdict = parseReviewerVerdict(reviewCall.content);
 			reviewAttempt = 1;
 
 			if (verdict.verdict === 'pass' || verdict.verdict === 'edit') {
