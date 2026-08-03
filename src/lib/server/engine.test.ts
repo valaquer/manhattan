@@ -38,6 +38,10 @@ const mockedCallModel = vi.mocked(callModel);
 const mockedGetMemory = vi.mocked(getMemory);
 const mockedGetRecentMessages = vi.mocked(getRecentMessages);
 
+function mr(content: string) {
+	return { content, usage: { prompt_tokens: 100, completion_tokens: 50, total_tokens: 150 } };
+}
+
 async function collectEvents(config: PipelineConfig): Promise<PipelineEvent[]> {
 	const events: PipelineEvent[] = [];
 	for await (const event of runPipeline(config)) {
@@ -67,7 +71,7 @@ beforeEach(() => {
 
 	// Default: Director returns valid JSON, Reviewer passes, Cutter returns valid JSON
 	mockedCallModel.mockImplementation(async (_model, _sys, _msgs) => {
-		return '{"world":null,"scene":{"read":"test direction"},"checks":[],"strategy":"test env"}';
+		return mr('{"world":null,"scene":{"read":"test direction"},"checks":[],"strategy":"test env"}');
 	});
 });
 
@@ -76,12 +80,12 @@ describe('runPipeline - fixture mode', () => {
 		let callCount = 0;
 		mockedCallModel.mockImplementation(async () => {
 			callCount++;
-			if (callCount <= 2) return '{"world":null,"scene":"test","checks":[],"strategy":"env"}'; // Directors
-			if (callCount === 3) return 'Hello from actor'; // Actor
-			if (callCount === 4) return '{"world":null,"scene":"char dir","checks":[],"strategy":"char env"}'; // Director-for-char
-			if (callCount === 5) return '{"verdict":"pass"}'; // Reviewer
-			if (callCount === 6) return '{"operations":[],"emotion_echo":"neutral","rolling_arc_update":"","rolling_arc_summary":"test"}'; // Cutter
-			return '{}';
+			if (callCount <= 2) return mr('{"world":null,"scene":"test","checks":[],"strategy":"env"}'); // Directors
+			if (callCount === 3) return mr('Hello from actor'); // Actor
+			if (callCount === 4) return mr('{"world":null,"scene":"char dir","checks":[],"strategy":"char env"}'); // Director-for-char
+			if (callCount === 5) return mr('{"verdict":"pass"}'); // Reviewer
+			if (callCount === 6) return mr('{"operations":[],"emotion_echo":"neutral","rolling_arc_update":"","rolling_arc_summary":"test"}'); // Cutter
+			return mr('{}');
 		});
 
 		const events = await collectEvents(fixtureConfig);
@@ -106,10 +110,10 @@ describe('runPipeline - production mode', () => {
 		let callCount = 0;
 		mockedCallModel.mockImplementation(async () => {
 			callCount++;
-			if (callCount === 1) return '{"world":null,"scene":"dir","checks":[],"strategy":"env"}'; // Director
-			if (callCount === 2) return '{"verdict":"pass"}'; // Reviewer
-			if (callCount === 3) return '{"operations":[],"emotion_echo":"ok","rolling_arc_update":"","rolling_arc_summary":"arc"}'; // Cutter
-			return '{}';
+			if (callCount === 1) return mr('{"world":null,"scene":"dir","checks":[],"strategy":"env"}'); // Director
+			if (callCount === 2) return mr('{"verdict":"pass"}'); // Reviewer
+			if (callCount === 3) return mr('{"operations":[],"emotion_echo":"ok","rolling_arc_update":"","rolling_arc_summary":"arc"}'); // Cutter
+			return mr('{}');
 		});
 
 		const events = await collectEvents(productionConfig);
@@ -125,7 +129,7 @@ describe('runPipeline - production mode', () => {
 
 describe('Director refusal - abort', () => {
 	it('aborts pipeline when Director-for-User refuses in fixture mode', async () => {
-		mockedCallModel.mockResolvedValueOnce('I cannot assist with that');
+		mockedCallModel.mockResolvedValueOnce(mr('I cannot assist with that'));
 
 		const events = await collectEvents(fixtureConfig);
 		const stages = events.filter(e => e.type === 'stage').map(e => (e as any).stage);
@@ -141,10 +145,10 @@ describe('Director refusal - abort', () => {
 		let callCount = 0;
 		mockedCallModel.mockImplementation(async () => {
 			callCount++;
-			if (callCount === 1) return '{"world":null,"scene":"d","checks":[],"strategy":"e"}'; // Dir-for-user
-			if (callCount === 2) return 'user msg'; // Actor
-			if (callCount === 3) return 'I cannot assist with that'; // Dir-for-char refuses
-			return '{}';
+			if (callCount === 1) return mr('{"world":null,"scene":"d","checks":[],"strategy":"e"}'); // Dir-for-user
+			if (callCount === 2) return mr('user msg'); // Actor
+			if (callCount === 3) return mr('I cannot assist with that'); // Dir-for-char refuses
+			return mr('{}');
 		});
 
 		const events = await collectEvents(fixtureConfig);
@@ -161,10 +165,10 @@ describe('Reviewer retry loop', () => {
 		let callCount = 0;
 		mockedCallModel.mockImplementation(async () => {
 			callCount++;
-			if (callCount <= 3) return '{"world":null,"scene":"d","checks":[],"strategy":"e"}';
-			if (callCount === 4) return '{"verdict":"pass"}'; // Reviewer passes
-			if (callCount === 5) return '{"operations":[]}'; // Cutter
-			return '{}';
+			if (callCount <= 3) return mr('{"world":null,"scene":"d","checks":[],"strategy":"e"}');
+			if (callCount === 4) return mr('{"verdict":"pass"}'); // Reviewer passes
+			if (callCount === 5) return mr('{"operations":[]}'); // Cutter
+			return mr('{}');
 		});
 
 		const events = await collectEvents(fixtureConfig);
@@ -176,11 +180,11 @@ describe('Reviewer retry loop', () => {
 		let callCount = 0;
 		mockedCallModel.mockImplementation(async () => {
 			callCount++;
-			if (callCount <= 3) return '{"world":null,"scene":"d","checks":[],"strategy":"e"}';
-			if (callCount === 4) return '{"verdict":"reject","fault":"performance","reason":"too flat"}'; // Reviewer rejects
-			if (callCount === 5) return '{"verdict":"pass"}'; // Reviewer passes on retry
-			if (callCount === 6) return '{"operations":[]}'; // Cutter
-			return '{}';
+			if (callCount <= 3) return mr('{"world":null,"scene":"d","checks":[],"strategy":"e"}');
+			if (callCount === 4) return mr('{"verdict":"reject","fault":"performance","reason":"too flat"}'); // Reviewer rejects
+			if (callCount === 5) return mr('{"verdict":"pass"}'); // Reviewer passes on retry
+			if (callCount === 6) return mr('{"operations":[]}'); // Cutter
+			return mr('{}');
 		});
 
 		const events = await collectEvents(fixtureConfig);
@@ -193,11 +197,11 @@ describe('Reviewer retry loop', () => {
 		let callCount = 0;
 		mockedCallModel.mockImplementation(async () => {
 			callCount++;
-			if (callCount <= 3) return '{"world":null,"scene":"d","checks":[],"strategy":"e"}';
-			if (callCount === 4) return '{"verdict":"reject","fault":"performance","reason":"bad"}'; // 1st reject
-			if (callCount === 5) return '{"verdict":"reject","fault":"performance","reason":"still bad"}'; // 2nd reject
-			if (callCount === 6) return '{"operations":[]}'; // Cutter
-			return '{}';
+			if (callCount <= 3) return mr('{"world":null,"scene":"d","checks":[],"strategy":"e"}');
+			if (callCount === 4) return mr('{"verdict":"reject","fault":"performance","reason":"bad"}'); // 1st reject
+			if (callCount === 5) return mr('{"verdict":"reject","fault":"performance","reason":"still bad"}'); // 2nd reject
+			if (callCount === 6) return mr('{"operations":[]}'); // Cutter
+			return mr('{}');
 		});
 
 		const events = await collectEvents(fixtureConfig);
@@ -211,10 +215,10 @@ describe('Reviewer infrastructure failure (Decision 2B)', () => {
 		let callCount = 0;
 		mockedCallModel.mockImplementation(async () => {
 			callCount++;
-			if (callCount <= 3) return '{"world":null,"scene":"d","checks":[],"strategy":"e"}';
+			if (callCount <= 3) return mr('{"world":null,"scene":"d","checks":[],"strategy":"e"}');
 			if (callCount === 4) throw new Error('OpenRouter 500'); // Reviewer infra failure
-			if (callCount === 5) return '{"operations":[]}'; // Cutter
-			return '{}';
+			if (callCount === 5) return mr('{"operations":[]}'); // Cutter
+			return mr('{}');
 		});
 
 		const events = await collectEvents(fixtureConfig);
@@ -232,10 +236,10 @@ describe('Reviewer infrastructure failure (Decision 2B)', () => {
 		let callCount = 0;
 		mockedCallModel.mockImplementation(async () => {
 			callCount++;
-			if (callCount <= 3) return '{"world":null,"scene":"d","checks":[],"strategy":"e"}';
-			if (callCount === 4) return 'not json at all!!!'; // Unparseable
-			if (callCount === 5) return '{"operations":[]}'; // Cutter
-			return '{}';
+			if (callCount <= 3) return mr('{"world":null,"scene":"d","checks":[],"strategy":"e"}');
+			if (callCount === 4) return mr('not json at all!!!'); // Unparseable
+			if (callCount === 5) return mr('{"operations":[]}'); // Cutter
+			return mr('{}');
 		});
 
 		const events = await collectEvents(fixtureConfig);
@@ -250,10 +254,10 @@ describe('Cutter failure - degrade gracefully', () => {
 		let callCount = 0;
 		mockedCallModel.mockImplementation(async () => {
 			callCount++;
-			if (callCount <= 3) return '{"world":null,"scene":"d","checks":[],"strategy":"e"}';
-			if (callCount === 4) return '{"verdict":"pass"}'; // Reviewer
+			if (callCount <= 3) return mr('{"world":null,"scene":"d","checks":[],"strategy":"e"}');
+			if (callCount === 4) return mr('{"verdict":"pass"}'); // Reviewer
 			if (callCount === 5) throw new Error('Cutter timeout'); // Cutter fails
-			return '{}';
+			return mr('{}');
 		});
 
 		const events = await collectEvents(fixtureConfig);
@@ -270,10 +274,10 @@ describe('Archivist trigger', () => {
 		let callCount = 0;
 		mockedCallModel.mockImplementation(async () => {
 			callCount++;
-			if (callCount <= 3) return '{"world":null,"scene":"d","checks":[],"strategy":"e"}';
-			if (callCount === 4) return '{"verdict":"pass"}';
-			if (callCount === 5) return '{"operations":[],"emotion_echo":"sad","rolling_arc_update":"","rolling_arc_summary":"arc","episode_boundary":{"detected":true}}';
-			return '{}';
+			if (callCount <= 3) return mr('{"world":null,"scene":"d","checks":[],"strategy":"e"}');
+			if (callCount === 4) return mr('{"verdict":"pass"}');
+			if (callCount === 5) return mr('{"operations":[],"emotion_echo":"sad","rolling_arc_update":"","rolling_arc_summary":"arc","episode_boundary":{"detected":true}}');
+			return mr('{}');
 		});
 
 		const events = await collectEvents(fixtureConfig);
@@ -288,10 +292,10 @@ describe('Token instrumentation', () => {
 		let callCount = 0;
 		mockedCallModel.mockImplementation(async () => {
 			callCount++;
-			if (callCount <= 3) return '{"world":null,"scene":"d","checks":[],"strategy":"e"}';
-			if (callCount === 4) return '{"verdict":"pass"}';
-			if (callCount === 5) return '{"operations":[]}';
-			return '{}';
+			if (callCount <= 3) return mr('{"world":null,"scene":"d","checks":[],"strategy":"e"}');
+			if (callCount === 4) return mr('{"verdict":"pass"}');
+			if (callCount === 5) return mr('{"operations":[]}');
+			return mr('{}');
 		});
 
 		const events = await collectEvents(fixtureConfig);
