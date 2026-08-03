@@ -57,6 +57,12 @@ function migrateSchema() {
 	if (!colNames.has('prompt_tokens')) db.exec('ALTER TABLE pipeline_outputs ADD COLUMN prompt_tokens INTEGER');
 	if (!colNames.has('completion_tokens')) db.exec('ALTER TABLE pipeline_outputs ADD COLUMN completion_tokens INTEGER');
 	if (!colNames.has('model_params')) db.exec('ALTER TABLE pipeline_outputs ADD COLUMN model_params TEXT');
+	if (!colNames.has('attempt')) db.exec('ALTER TABLE pipeline_outputs ADD COLUMN attempt INTEGER DEFAULT 1');
+
+	const memoryCols = db.prepare("PRAGMA table_info(memory)").all() as Array<{ name: string }>;
+	const memoryColNames = new Set(memoryCols.map(c => c.name));
+	if (!memoryColNames.has('attempt')) db.exec('ALTER TABLE memory ADD COLUMN attempt INTEGER DEFAULT 1');
+	if (!memoryColNames.has('superseded')) db.exec("ALTER TABLE memory ADD COLUMN superseded INTEGER DEFAULT 0");
 
 	const sessionCols = db.prepare("PRAGMA table_info(sessions)").all() as Array<{ name: string }>;
 	const sessionColNames = new Set(sessionCols.map(c => c.name));
@@ -101,11 +107,11 @@ export function getAllMessages(sessionId: number): Array<{ sender: string; conte
 
 export function savePipelineOutput(
 	sessionId: number, turnNumber: number, stage: string, model: string, content: string,
-	promptTokens?: number, completionTokens?: number, modelParams?: string,
+	promptTokens?: number, completionTokens?: number, modelParams?: string, attempt?: number,
 ): number {
 	return db.prepare(
-		'INSERT INTO pipeline_outputs (session_id, turn_number, stage, model, content, prompt_tokens, completion_tokens, model_params) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-	).run(sessionId, turnNumber, stage, model, content, promptTokens ?? null, completionTokens ?? null, modelParams ?? null).lastInsertRowid as number;
+		'INSERT INTO pipeline_outputs (session_id, turn_number, stage, model, content, prompt_tokens, completion_tokens, model_params, attempt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+	).run(sessionId, turnNumber, stage, model, content, promptTokens ?? null, completionTokens ?? null, modelParams ?? null, attempt ?? 1).lastInsertRowid as number;
 }
 
 // === Memory Queries (Cutter extractions — living state) ===
@@ -118,12 +124,20 @@ export function updateMemory(id: number, content: string, turnNumber: number): v
 	db.prepare('UPDATE memory SET content = ?, turn_updated = ? WHERE id = ?').run(content, turnNumber, id);
 }
 
+export function supersedeMemoryForTurn(sessionId: number, turnNumber: number): void {
+	db.prepare('UPDATE memory SET superseded = 1 WHERE session_id = ? AND turn_created = ?').run(sessionId, turnNumber);
+}
+
+export function updateMessageContent(sessionId: number, turnNumber: number, sender: string, content: string): void {
+	db.prepare('UPDATE messages SET content = ? WHERE session_id = ? AND turn_number = ? AND sender = ?').run(content, sessionId, turnNumber, sender);
+}
+
 export function getMemory(sessionId: number): Array<{ id: number; type: string; content: string; turn_created: number; turn_updated: number }> {
-	return db.prepare('SELECT id, type, content, turn_created, turn_updated FROM memory WHERE session_id = ? ORDER BY id').all(sessionId) as Array<{ id: number; type: string; content: string; turn_created: number; turn_updated: number }>;
+	return db.prepare('SELECT id, type, content, turn_created, turn_updated FROM memory WHERE session_id = ? AND (superseded = 0 OR superseded IS NULL) ORDER BY id').all(sessionId) as Array<{ id: number; type: string; content: string; turn_created: number; turn_updated: number }>;
 }
 
 export function getMemoryByType(sessionId: number, type: string): Array<{ id: number; content: string; turn_created: number; turn_updated: number }> {
-	return db.prepare('SELECT id, content, turn_created, turn_updated FROM memory WHERE session_id = ? AND type = ? ORDER BY id').all(sessionId, type) as Array<{ id: number; content: string; turn_created: number; turn_updated: number }>;
+	return db.prepare('SELECT id, content, turn_created, turn_updated FROM memory WHERE session_id = ? AND type = ? AND (superseded = 0 OR superseded IS NULL) ORDER BY id').all(sessionId, type) as Array<{ id: number; content: string; turn_created: number; turn_updated: number }>;
 }
 
 // === Session Management ===

@@ -170,7 +170,10 @@ export function mergeDirectorToPerformer(directorResult: DirectorResult): MergeR
 	};
 }
 
-export function mergeForDirectorCharacter(ctx: PipelineContext, marcusMessage: string): MergeResult<string> {
+export function mergeForDirectorCharacter(
+	ctx: PipelineContext, marcusMessage: string,
+	retry?: { rejectedTake: string; feedback: string },
+): MergeResult<string> {
 	const parts: string[] = [];
 
 	if (ctx.memoryContext) {
@@ -180,6 +183,11 @@ export function mergeForDirectorCharacter(ctx: PipelineContext, marcusMessage: s
 		parts.push(`CONVERSATION HISTORY:\n${ctx.transcript}\n\n`);
 	}
 	parts.push(`Marcus just said: ${marcusMessage}`);
+
+	if (retry) {
+		parts.push(`\n\nREJECTED TAKE:\n${retry.rejectedTake}`);
+		parts.push(`\n\nUSER FEEDBACK:\n${retry.feedback}`);
+	}
 
 	const value = parts.join('');
 	const transcriptTurns = ctx.transcript ? ctx.transcript.split('\n').length : 0;

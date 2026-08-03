@@ -22,6 +22,8 @@
 	let isPlaying = $state(false);
 	let isPaused = $state(true);
 	let streamingContent = $state('');
+	let showRetryInput = $state(false);
+	let retryFeedback = $state('');
 
 	// === Turn navigation ===
 	function goForward() {
@@ -136,6 +138,76 @@
 		currentTurnIndex = 0;
 	}
 
+	// === Retry ===
+	function toggleRetryInput() {
+		showRetryInput = !showRetryInput;
+		if (!showRetryInput) retryFeedback = '';
+	}
+
+	async function submitRetry() {
+		if (!retryFeedback.trim() || turns.length === 0) return;
+		const currentTurn = turns[currentTurnIndex];
+		const actressBlock = currentTurn.blocks.find(b =>
+			b.type === 'actress-for-character' || b.type === 'actress'
+		);
+		const rejectedTake = actressBlock?.content ?? '';
+
+		showRetryInput = false;
+		isPlaying = true;
+		isPaused = false;
+
+		currentTurn.blocks = currentTurn.blocks.filter(b =>
+			b.type === 'director-for-user' || b.type === 'actor-for-user' || b.type === 'user'
+		);
+		turns = [...turns];
+
+		const res = await fetch('/api/pipeline', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				retry: { rejectedTake, feedback: retryFeedback, turnNumber: currentTurn.number },
+			}),
+		});
+
+		if (!res.ok || !res.body) {
+			isPlaying = false;
+			isPaused = true;
+			retryFeedback = '';
+			return;
+		}
+
+		const reader = res.body.getReader();
+		const decoder = new TextDecoder();
+		let buffer = '';
+
+		while (true) {
+			const { done, value } = await reader.read();
+			if (done) break;
+			buffer += decoder.decode(value, { stream: true });
+			const lines = buffer.split('\n');
+			buffer = lines.pop() || '';
+
+			for (const line of lines) {
+				if (!line.startsWith('data: ')) continue;
+				const payload = line.slice(6).trim();
+				if (payload === '[DONE]') continue;
+				try {
+					const event = JSON.parse(payload);
+					if (event.type === 'error') {
+						currentTurn.blocks = [...currentTurn.blocks, { type: 'error', sender: 'Error', content: event.content }];
+					} else if (event.type === 'stage') {
+						currentTurn.blocks = [...currentTurn.blocks, { type: event.type === 'stage' ? event.stage : event.type, sender: event.sender || event.stage, content: event.content }];
+					}
+					turns = [...turns];
+				} catch { /* skip */ }
+			}
+		}
+
+		isPlaying = false;
+		isPaused = true;
+		retryFeedback = '';
+	}
+
 	// === Block colors ===
 	function blockColor(type: string): string {
 		switch (type) {
@@ -212,11 +284,25 @@
 			<button class="control-btn" disabled={currentTurnIndex >= turns.length - 1} onclick={goForward} title="Next Turn"><FastForward size={14} /></button>
 			<button class="control-btn" disabled={isPlaying} onclick={runPipeline} title="Play"><Play size={14} /></button>
 			<button class="control-btn" disabled={!isPlaying} title="Pause"><Pause size={14} /></button>
-			<button class="control-btn" title="Restart Turn"><RotateCcw size={14} /></button>
+			<button class="control-btn" onclick={toggleRetryInput} disabled={turns.length === 0 || isPlaying} title="Retry"><RotateCcw size={14} /></button>
 			<button class="control-btn" onclick={resetAll} title="Restart All"><RotateCw size={14} /></button>
 			<span class="control-status">{isPlaying ? 'Running' : isPaused ? 'Paused' : 'Ready'}</span>
 			<span class="turn-counter">{turns.length > 0 ? `Turn ${currentTurnIndex + 1} / ${turns.length}` : 'No turns'}</span>
 		</div>
+
+		<!-- Retry feedback bar -->
+		{#if showRetryInput}
+			<div class="retry-bar">
+				<input
+					class="retry-input"
+					type="text"
+					placeholder="What was wrong with Sophie's response?"
+					bind:value={retryFeedback}
+					onkeydown={(e) => { if (e.key === 'Enter') submitRetry(); }}
+				/>
+				<button class="retry-submit" onclick={submitRetry} disabled={!retryFeedback.trim()}>Retry</button>
+			</div>
+		{/if}
 
 		<!-- Conversation (one turn at a time) -->
 		<div class="conversation">
@@ -263,6 +349,41 @@
 		flex-direction: column;
 		overflow: hidden;
 	}
+
+	/* --- Retry bar --- */
+	.retry-bar {
+		display: flex;
+		gap: 8px;
+		padding: 8px 24px;
+		background: rgba(174, 13, 70, 0.08);
+		border-bottom: 1px dashed #AE0D46;
+	}
+
+	.retry-input {
+		flex: 1;
+		background: transparent;
+		border: 1px solid #333;
+		border-radius: 4px;
+		color: #E8E4DF;
+		padding: 6px 12px;
+		font-family: inherit;
+		font-size: 12px;
+	}
+
+	.retry-input::placeholder { color: #555; }
+
+	.retry-submit {
+		background: #AE0D46;
+		border: none;
+		border-radius: 4px;
+		color: #E8E4DF;
+		padding: 6px 16px;
+		font-family: inherit;
+		font-size: 12px;
+		cursor: pointer;
+	}
+
+	.retry-submit:disabled { opacity: 0.3; cursor: default; }
 
 	/* --- Control strip --- */
 	.control-strip {

@@ -12,6 +12,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		sessionId: body.sessionId,
 		windows: body.windows,
 		models: body.models,
+		retry: body.retry,
 	};
 
 	const encoder = new TextEncoder();

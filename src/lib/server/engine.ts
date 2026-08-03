@@ -6,6 +6,8 @@ import {
 	saveMemory,
 	getMemory,
 	getRecentMessages,
+	supersedeMemoryForTurn,
+	updateMessageContent,
 } from '$lib/server/db';
 import {
 	loadBook,
@@ -58,6 +60,7 @@ export interface PipelineConfig {
 	mode: 'production' | 'fixture';
 	windows?: Partial<AgentWindows>;
 	models?: Partial<ModelConfig>;
+	retry?: { rejectedTake: string; feedback: string; turnNumber: number };
 }
 
 interface ModelConfig {
@@ -140,7 +143,9 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 	const windows = { ...DEFAULT_WINDOWS, ...config.windows };
 	const models = { ...DEFAULT_MODELS, ...config.models };
 	const sessionId = config.sessionId ?? getOrCreateSession();
-	const turnNumber = getNextTurnNumber(sessionId);
+	const isRetry = !!config.retry;
+	const turnNumber = isRetry ? config.retry!.turnNumber : getNextTurnNumber(sessionId);
+	const attempt = isRetry ? 2 : 1;
 	const sheet = loadCharacterSheet(config.characterName);
 	const allMeta: Record<string, MergeMeta> = {};
 	let retryCount = 0;
@@ -163,8 +168,14 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 
 		let userMessage = '';
 
+		if (isRetry) {
+			supersedeMemoryForTurn(sessionId, turnNumber);
+			const latestMessages = getRecentMessages(sessionId, 1);
+			userMessage = latestMessages.filter(m => m.sender === 'Marcus').pop()?.content ?? '';
+		}
+
 		// === Fixture mode: user-side calls ===
-		if (config.mode === 'fixture') {
+		if (config.mode === 'fixture' && !isRetry) {
 			// Call 1: Director-for-User
 			const dirUserPrompt = assembleSystemPrompt('director-user', config.characterName, models);
 			const dirUserMerge = mergeForDirectorUser(ctx);
@@ -220,17 +231,17 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 
 		// === Call 3: Director-for-Character ===
 		const directorPrompt = assembleSystemPrompt('director', config.characterName, models);
-		const directorCtx: PipelineContext = config.mode === 'fixture'
+		const directorCtx: PipelineContext = (config.mode === 'fixture' || isRetry)
 			? { ...ctx, transcript: formatTranscript(getRecentMessages(sessionId, windows.director)) }
 			: ctx;
 
 		// In production mode, user's message is already in DB
-		if (config.mode === 'production') {
+		if (config.mode === 'production' && !isRetry) {
 			const latestMessages = getRecentMessages(sessionId, 1);
 			userMessage = latestMessages[latestMessages.length - 1]?.content ?? '';
 		}
 
-		const directorMerge = mergeForDirectorCharacter(directorCtx, userMessage);
+		const directorMerge = mergeForDirectorCharacter(directorCtx, userMessage, config.retry);
 
 		allMeta['director'] = directorMerge.meta;
 
@@ -260,7 +271,7 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 			: JSON.stringify({ world: directorResult.world, scene: directorResult.scene, checks: directorResult.checks, strategy: directorResult.strategy }, null, 2);
 
 		savePipelineOutput(sessionId, turnNumber, 'director-for-character', models.director, directorContent,
-			dirCharCall.usage?.prompt_tokens, dirCharCall.usage?.completion_tokens, JSON.stringify(dirCharParams));
+			dirCharCall.usage?.prompt_tokens, dirCharCall.usage?.completion_tokens, JSON.stringify(dirCharParams), attempt);
 		yield { type: 'stage', stage: 'director-for-character', content: directorContent, model: models.director, meta: directorMerge.meta };
 
 		if (directorResult.refused) {
@@ -385,9 +396,13 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 		}
 
 		// Save final response
-		saveMessage(sessionId, turnNumber, config.characterName, characterResponse);
+		if (isRetry) {
+			updateMessageContent(sessionId, turnNumber, config.characterName, characterResponse);
+		} else {
+			saveMessage(sessionId, turnNumber, config.characterName, characterResponse);
+		}
 		savePipelineOutput(sessionId, turnNumber, 'actress-for-character', models.actress, characterResponse,
-			actressUsage?.prompt_tokens, actressUsage?.completion_tokens, JSON.stringify(actressParams));
+			actressUsage?.prompt_tokens, actressUsage?.completion_tokens, JSON.stringify(actressParams), attempt);
 		yield {
 			type: 'stage', stage: 'actress-for-character', content: characterResponse,
 			model: models.actress, meta: actressMerge.meta,
@@ -433,7 +448,7 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 			}
 
 			savePipelineOutput(sessionId, turnNumber, 'artisan-cutter', models.cutter, cutterContent,
-				cutterCall.usage?.prompt_tokens, cutterCall.usage?.completion_tokens, JSON.stringify(cutterParams));
+				cutterCall.usage?.prompt_tokens, cutterCall.usage?.completion_tokens, JSON.stringify(cutterParams), attempt);
 			yield { type: 'stage', stage: 'artisan-cutter', content: cutterContent, model: models.cutter, meta: cutterMerge.meta };
 		} catch (cutterErr) {
 			const errMsg = cutterErr instanceof Error ? cutterErr.message : String(cutterErr);
