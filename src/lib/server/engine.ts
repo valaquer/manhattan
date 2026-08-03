@@ -338,6 +338,7 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 
 			savePipelineOutput(sessionId, turnNumber, 'reviewer', models.reviewer, reviewCall.content,
 				reviewCall.usage?.prompt_tokens, reviewCall.usage?.completion_tokens, JSON.stringify(reviewerParams), attempt);
+			yield { type: 'stage', stage: 'reviewer', content: reviewCall.content, model: models.reviewer };
 			const verdict = parseReviewerVerdict(reviewCall.content);
 			reviewAttempt = 1;
 
