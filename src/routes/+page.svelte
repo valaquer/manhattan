@@ -676,13 +676,17 @@
 
 	.setting-input {
 		flex: 1;
-		background: #1a1c20;
-		border: 1px solid #333;
-		border-radius: 3px;
+		background: transparent;
+		border: none;
 		color: #E8E4DF;
 		font-size: 10px;
-		padding: 3px 6px;
+		padding: 3px 0;
 		font-family: inherit;
+	}
+
+	.setting-input:focus {
+		outline: none;
+		border-bottom: 1px solid #444;
 	}
 
 	/* --- Session browser --- */
