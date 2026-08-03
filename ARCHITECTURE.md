@@ -105,7 +105,7 @@ Touches: pipeline/+server.ts only. All chat turns flow through here. Changes aff
 Touches: engine.ts only. Zero framework dependencies -- designed to port to Prague as pure TypeScript. Changes must maintain zero-dep constraint.
 
 ### openrouter.ts
-Touches: engine.ts only. External API calls to OpenRouter. Changes affect model selection, retry behavior, and token instrumentation.
+Touches: engine.ts only. External API calls to OpenRouter. `callModel()` returns `{ content, usage }` with token counts. `streamModelBuffered()` captures usage from SSE stream. Changes affect model selection, retry behavior, and cost recording.
 
 ### db.ts
 Touches: pipeline (write), turns (read), reset (write), session browser (read). 3-table schema: messages, pipeline_outputs, memory. Sessions table tracks conversation runs. No data deletion -- reset creates a new session, old data preserved.
