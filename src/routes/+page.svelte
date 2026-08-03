@@ -320,10 +320,7 @@
 
 			<!-- Model settings -->
 			<div class="pipeline-info">
-				<button class="pipeline-label settings-toggle" onclick={() => showSettings = !showSettings}>
-					Settings {showSettings ? '▾' : '▸'}
-				</button>
-				{#if showSettings}
+				<div class="pipeline-label">Settings</div>
 					<div class="settings-panel">
 						<div class="setting-group">
 							<div class="setting-group-label">Director · Reviewer · Cutter</div>
@@ -349,7 +346,6 @@
 							</label>
 						</div>
 					</div>
-				{/if}
 			</div>
 
 			<!-- Session browser -->
