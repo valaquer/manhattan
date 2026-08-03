@@ -61,6 +61,7 @@ export interface PipelineConfig {
 	windows?: Partial<AgentWindows>;
 	models?: Partial<ModelConfig>;
 	retry?: { rejectedTake: string; feedback: string; turnNumber: number };
+	reasoningEffort?: string;
 }
 
 interface ModelConfig {
@@ -149,6 +150,11 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 	const sheet = loadCharacterSheet(config.characterName);
 	const allMeta: Record<string, MergeMeta> = {};
 	let retryCount = 0;
+
+	if (config.reasoningEffort) {
+		const dirModel = models.director;
+		DIRECTOR_PARAMS[dirModel] = { ...DIRECTOR_PARAMS[dirModel], reasoning_effort: config.reasoningEffort };
+	}
 
 	try {
 		// --- Context assembly ---

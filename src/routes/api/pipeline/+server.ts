@@ -13,6 +13,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		windows: body.windows,
 		models: body.models,
 		retry: body.retry,
+		reasoningEffort: body.reasoningEffort,
 	};
 
 	const encoder = new TextEncoder();

@@ -29,6 +29,12 @@
 	let latestSessionId = $state<number | null>(null);
 	let isViewingOldSession = $derived(activeSessionId !== null && latestSessionId !== null && activeSessionId !== latestSessionId);
 
+	// === Model settings ===
+	let directorModel = $state('deepseek/deepseek-v4-flash');
+	let actressModel = $state('nousresearch/hermes-4-70b');
+	let reasoningEffort = $state('none');
+	let showSettings = $state(false);
+
 	// === Turn navigation ===
 	function goForward() {
 		if (currentTurnIndex < turns.length - 1) currentTurnIndex++;
@@ -84,7 +90,20 @@
 		turns = [...turns, newTurn];
 		currentTurnIndex = turns.length - 1;
 
-		const res = await fetch('/api/pipeline', { method: 'POST' });
+		const res = await fetch('/api/pipeline', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				models: {
+					director: directorModel,
+					actress: actressModel,
+					reviewer: directorModel,
+					cutter: directorModel,
+					archivist: directorModel,
+				},
+				reasoningEffort,
+			}),
+		});
 
 		if (!res.ok || !res.body) {
 			isPlaying = false;
@@ -294,6 +313,34 @@
 				<div class="pipeline-row"><span class="pipeline-dot" style="background: #AE0D46;"></span> Actress for Character --Hermes 4 70B</div>
 				<div class="pipeline-row"><span class="pipeline-dot" style="background: #888;"></span> Artisan Cutter --DeepSeek V4 Flash</div>
 				<div class="pipeline-row"><span class="pipeline-dot" style="background: #b0aba5;"></span> Klara --Evaluator</div>
+			</div>
+
+			<!-- Model settings -->
+			<div class="pipeline-info">
+				<button class="pipeline-label settings-toggle" onclick={() => showSettings = !showSettings}>
+					Settings {showSettings ? '▾' : '▸'}
+				</button>
+				{#if showSettings}
+					<div class="settings-panel">
+						<label class="setting-row">
+							<span class="setting-label">Director</span>
+							<input class="setting-input" bind:value={directorModel} />
+						</label>
+						<label class="setting-row">
+							<span class="setting-label">Actress</span>
+							<input class="setting-input" bind:value={actressModel} />
+						</label>
+						<label class="setting-row">
+							<span class="setting-label">Reasoning</span>
+							<select class="setting-input" bind:value={reasoningEffort}>
+								<option value="none">none</option>
+								<option value="low">low</option>
+								<option value="medium">medium</option>
+								<option value="high">high</option>
+							</select>
+						</label>
+					</div>
+				{/if}
 			</div>
 
 			<!-- Session browser -->
@@ -553,6 +600,45 @@
 	.klara-block .block-text {
 		font-size: 11px;
 		opacity: 0.7;
+	}
+
+	/* --- Settings panel --- */
+	.settings-toggle {
+		background: none;
+		border: none;
+		cursor: pointer;
+		font-family: inherit;
+		padding: 0;
+	}
+
+	.settings-panel {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		margin-top: 8px;
+	}
+
+	.setting-row {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.setting-label {
+		color: #555;
+		font-size: 10px;
+		min-width: 60px;
+	}
+
+	.setting-input {
+		flex: 1;
+		background: #1a1c20;
+		border: 1px solid #333;
+		border-radius: 3px;
+		color: #E8E4DF;
+		font-size: 10px;
+		padding: 3px 6px;
+		font-family: inherit;
 	}
 
 	/* --- Session browser --- */
