@@ -588,8 +588,9 @@
 		font-weight: bold;
 		text-transform: uppercase;
 		letter-spacing: 0.5px;
-		padding-top: 4px;
+		padding-top: 0;
 		text-align: right;
+		line-height: 1.6;
 	}
 
 	.block-content {
