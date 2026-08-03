@@ -73,11 +73,11 @@ interface ModelConfig {
 }
 
 const DEFAULT_MODELS: ModelConfig = {
-	director: 'deepseek/deepseek-v4-flash',
+	director: 'deepseek/deepseek-v4-flash-0731',
 	actress: 'nousresearch/hermes-4-70b',
-	reviewer: 'deepseek/deepseek-v4-flash',
-	cutter: 'deepseek/deepseek-v4-flash',
-	archivist: 'deepseek/deepseek-v4-flash',
+	reviewer: 'deepseek/deepseek-v4-flash-0731',
+	cutter: 'deepseek/deepseek-v4-flash-0731',
+	archivist: 'deepseek/deepseek-v4-flash-0731',
 };
 
 const ACTRESS_PARAMS: Record<string, Record<string, number | string>> = {
@@ -88,7 +88,7 @@ const ACTRESS_PARAMS: Record<string, Record<string, number | string>> = {
 };
 
 const DIRECTOR_PARAMS: Record<string, Record<string, number | string>> = {
-	'deepseek/deepseek-v4-flash': { temperature: 0.3, top_p: 1.0, max_tokens: 500, reasoning_effort: 'none' },
+	'deepseek/deepseek-v4-flash-0731': { temperature: 0.3, top_p: 1.0, max_tokens: 500, reasoning_effort: 'none' },
 };
 
 // --- Pipeline Events ---

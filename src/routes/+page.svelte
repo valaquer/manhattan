@@ -33,7 +33,7 @@
 	let sessionTotalTokens = $derived(turns.reduce((total, t) => total + t.blocks.reduce((sum, b) => sum + (b.promptTokens ?? 0) + (b.completionTokens ?? 0), 0), 0));
 
 	// === Model settings ===
-	let directorModel = $state('deepseek/deepseek-v4-flash');
+	let directorModel = $state('deepseek/deepseek-v4-flash-0731');
 	let actressModel = $state('nousresearch/hermes-4-70b');
 	let reasoningEffort = $state('none');
 	let showSettings = $state(false);
@@ -310,11 +310,11 @@
 			<!-- Pipeline info -->
 			<div class="pipeline-info">
 				<div class="pipeline-label">Pipeline</div>
-				<div class="pipeline-row"><span class="pipeline-dot" style="background: #888;"></span> Director for User --DeepSeek V4 Flash</div>
+				<div class="pipeline-row"><span class="pipeline-dot" style="background: #888;"></span> Director for User --DeepSeek V4 Flash 0731</div>
 				<div class="pipeline-row"><span class="pipeline-dot" style="background: #D4A574;"></span> Actor for User --Hermes 4 70B</div>
-				<div class="pipeline-row"><span class="pipeline-dot" style="background: #888;"></span> Director for Character --DeepSeek V4 Flash</div>
+				<div class="pipeline-row"><span class="pipeline-dot" style="background: #888;"></span> Director for Character --DeepSeek V4 Flash 0731</div>
 				<div class="pipeline-row"><span class="pipeline-dot" style="background: #AE0D46;"></span> Actress for Character --Hermes 4 70B</div>
-				<div class="pipeline-row"><span class="pipeline-dot" style="background: #888;"></span> Artisan Cutter --DeepSeek V4 Flash</div>
+				<div class="pipeline-row"><span class="pipeline-dot" style="background: #888;"></span> Artisan Cutter --DeepSeek V4 Flash 0731</div>
 				<div class="pipeline-row"><span class="pipeline-dot" style="background: #b0aba5;"></span> Klara --Evaluator</div>
 			</div>
 
