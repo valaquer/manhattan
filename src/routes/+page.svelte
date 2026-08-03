@@ -9,6 +9,8 @@
 		sender: string;
 		content: string;
 		meta?: Record<string, unknown>;
+		promptTokens?: number | null;
+		completionTokens?: number | null;
 	}
 
 	interface Turn {
@@ -399,13 +401,20 @@
 			{:else}
 				{@const turn = turns[currentTurnIndex]}
 				<div class="turn-group">
+					{@const turnTokens = turn.blocks.reduce((sum, b) => sum + (b.promptTokens ?? 0) + (b.completionTokens ?? 0), 0)}
 					<div class="turn-divider">
 						<span class="turn-number">Turn {turn.number}</span>
+						{#if turnTokens > 0}
+							<span class="turn-cost">{turnTokens.toLocaleString()} tokens</span>
+						{/if}
 					</div>
 					{#each turn.blocks as block}
 						<div class="turn-block" class:klara-block={block.type === 'klara'}>
 							<div class="block-label" style="color: {blockColor(block.type)};">
 								{blockLabel(block.type)}
+								{#if block.promptTokens || block.completionTokens}
+									<div class="block-tokens">{block.promptTokens ?? 0}→{block.completionTokens ?? 0}</div>
+								{/if}
 							</div>
 							<div class="block-content" style="border-left: 2px solid {blockColor(block.type)};">
 								{#if isJson(block.type)}
@@ -537,6 +546,8 @@
 	}
 
 	.turn-divider {
+		display: flex;
+		align-items: center;
 		margin-bottom: 16px;
 		padding-bottom: 4px;
 		border-bottom: 1px dashed #282a30;
@@ -600,6 +611,20 @@
 	.klara-block .block-text {
 		font-size: 11px;
 		opacity: 0.7;
+	}
+
+	/* --- Cost display --- */
+	.turn-cost {
+		color: #555;
+		font-size: 10px;
+		margin-left: auto;
+	}
+
+	.block-tokens {
+		font-size: 9px;
+		color: #444;
+		font-weight: normal;
+		margin-top: 2px;
 	}
 
 	/* --- Settings panel --- */

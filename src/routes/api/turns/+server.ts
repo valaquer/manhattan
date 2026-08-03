@@ -9,8 +9,8 @@ export const GET: RequestHandler = async ({ url }) => {
 
 	// Get all pipeline outputs grouped by turn
 	const outputs = db.prepare(
-		'SELECT turn_number, stage, content FROM pipeline_outputs WHERE session_id = ? ORDER BY id'
-	).all(sessionId) as Array<{ turn_number: number; stage: string; content: string }>;
+		'SELECT turn_number, stage, content, prompt_tokens, completion_tokens, model_params FROM pipeline_outputs WHERE session_id = ? ORDER BY id'
+	).all(sessionId) as Array<{ turn_number: number; stage: string; content: string; prompt_tokens: number | null; completion_tokens: number | null; model_params: string | null }>;
 
 	// Get all messages
 	const messages = getAllMessages(sessionId);
@@ -32,6 +32,8 @@ export const GET: RequestHandler = async ({ url }) => {
 			type: o.stage,
 			sender: senderMap[o.stage] || o.stage,
 			content: o.content,
+			promptTokens: o.prompt_tokens,
+			completionTokens: o.completion_tokens,
 		});
 	}
 
