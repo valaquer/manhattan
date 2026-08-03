@@ -24,6 +24,8 @@
 	let streamingContent = $state('');
 	let showRetryInput = $state(false);
 	let retryFeedback = $state('');
+	let sessions = $state<Array<{ id: number; created_at: string; turnCount: number }>>([]);
+	let activeSessionId = $state<number | null>(null);
 
 	// === Turn navigation ===
 	function goForward() {
@@ -35,19 +37,36 @@
 	}
 
 	// === Load turns from DB ===
-	async function loadTurns() {
-		const res = await fetch('/api/turns');
+	async function loadTurns(sessionId?: number) {
+		const url = sessionId ? `/api/turns?sessionId=${sessionId}` : '/api/turns';
+		const res = await fetch(url);
 		if (res.ok) {
 			const data = await res.json();
 			turns = data.turns;
+			activeSessionId = data.sessionId;
 			if (turns.length > 0) {
 				currentTurnIndex = turns.length - 1;
+			} else {
+				currentTurnIndex = 0;
 			}
 		}
 	}
 
+	async function loadSessions() {
+		const res = await fetch('/api/sessions');
+		if (res.ok) {
+			const data = await res.json();
+			sessions = data.sessions;
+		}
+	}
+
+	function switchSession(sessionId: number) {
+		loadTurns(sessionId);
+	}
+
 	onMount(() => {
 		loadTurns();
+		loadSessions();
 	});
 
 	// === Run pipeline ===
@@ -111,10 +130,13 @@
 						const currentTurn = turns[currentTurnIndex];
 						currentTurn.blocks = [...currentTurn.blocks, { type: 'error', sender: 'Error', content: event.content }];
 						turns = [...turns];
-					} else {
-						// Normal block (user, director, cutter)
+					} else if (event.type === 'stage') {
 						const currentTurn = turns[currentTurnIndex];
-						currentTurn.blocks = [...currentTurn.blocks, { type: event.type, sender: event.sender, content: event.content }];
+						currentTurn.blocks = [...currentTurn.blocks, { type: event.stage, sender: event.stage, content: event.content }];
+						turns = [...turns];
+					} else if (event.type === 'warning') {
+						const currentTurn = turns[currentTurnIndex];
+						currentTurn.blocks = [...currentTurn.blocks, { type: 'warning', sender: `Warning: ${event.stage}`, content: event.error || '' }];
 						turns = [...turns];
 					}
 				} catch {
@@ -270,6 +292,22 @@
 				<div class="pipeline-row"><span class="pipeline-dot" style="background: #888;"></span> Artisan Cutter --DeepSeek V4 Flash</div>
 				<div class="pipeline-row"><span class="pipeline-dot" style="background: #b0aba5;"></span> Klara --Evaluator</div>
 			</div>
+
+			<!-- Session browser -->
+			{#if sessions.length > 1}
+				<div class="session-browser">
+					<div class="pipeline-label">Sessions</div>
+					{#each sessions as session}
+						<button
+							class="session-row"
+							class:active={session.id === activeSessionId}
+							onclick={() => switchSession(session.id)}
+						>
+							Session {session.id} · {session.turnCount} turns
+						</button>
+					{/each}
+				</div>
+			{/if}
 		</div>
 		<div class="hb-sidebar-footer">
 			Cache: M19
@@ -513,6 +551,30 @@
 		font-size: 11px;
 		opacity: 0.7;
 	}
+
+	/* --- Session browser --- */
+	.session-browser {
+		padding: 12px 16px;
+		margin: 8px;
+	}
+
+	.session-row {
+		display: block;
+		width: 100%;
+		background: none;
+		border: none;
+		color: #555;
+		font-size: 10px;
+		line-height: 2;
+		text-align: left;
+		cursor: pointer;
+		padding: 2px 8px;
+		border-radius: 3px;
+		font-family: inherit;
+	}
+
+	.session-row:hover { color: #888; background: rgba(255,255,255,0.03); }
+	.session-row.active { color: #E8E4DF; background: rgba(255,255,255,0.06); }
 
 	/* --- Persona card --- */
 	.persona-card {

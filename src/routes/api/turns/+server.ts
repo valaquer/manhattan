@@ -3,8 +3,9 @@ import type { RequestHandler } from './$types';
 import { getOrCreateSession, getAllMessages, getMemory } from '$lib/server/db';
 import db from '$lib/server/db';
 
-export const GET: RequestHandler = async () => {
-	const sessionId = getOrCreateSession();
+export const GET: RequestHandler = async ({ url }) => {
+	const requestedSession = url.searchParams.get('sessionId');
+	const sessionId = requestedSession ? parseInt(requestedSession, 10) : getOrCreateSession();
 
 	// Get all pipeline outputs grouped by turn
 	const outputs = db.prepare(
