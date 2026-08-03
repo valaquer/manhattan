@@ -356,7 +356,7 @@
 							class:active={session.id === activeSessionId}
 							onclick={() => switchSession(session.id)}
 						>
-							Session {session.id} · {session.turnCount} turns
+							{new Date(session.created_at + 'Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, {new Date(session.created_at + 'Z').toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })} · {session.turnCount} turns
 						</button>
 					{/each}
 				</div>
