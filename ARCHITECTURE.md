@@ -26,7 +26,8 @@ library/manhattan-app/                 # App codebase (git: valaquer/manhattan)
 │       └── api/
 │           ├── pipeline/+server.ts   # POST: runs full 5-agent pipeline
 │           ├── turns/+server.ts      # GET: conversation history
-│           └── reset/+server.ts      # POST: reset conversation state
+│           ├── reset/+server.ts      # POST: reset conversation state (creates new session)
+│           └── sessions/+server.ts  # GET: list all sessions with turn counts
 ├── data/
 │   └── manhattan.db                  # SQLite database
 ├── vite.config.ts                    # Port 51770
@@ -50,7 +51,8 @@ pipeline/+server.ts
     → merge.ts (pure TypeScript, zero framework deps)
 
 turns/+server.ts → db.ts (read conversation history)
-reset/+server.ts → db.ts (clear conversation state)
+reset/+server.ts → db.ts (create new session, preserve old data)
+sessions/+server.ts → db.ts (list all sessions with turn counts)
 ```
 
 ### External Dependencies
