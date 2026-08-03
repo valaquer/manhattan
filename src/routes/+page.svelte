@@ -26,6 +26,8 @@
 	let retryFeedback = $state('');
 	let sessions = $state<Array<{ id: number; created_at: string; turnCount: number }>>([]);
 	let activeSessionId = $state<number | null>(null);
+	let latestSessionId = $state<number | null>(null);
+	let isViewingOldSession = $derived(activeSessionId !== null && latestSessionId !== null && activeSessionId !== latestSessionId);
 
 	// === Turn navigation ===
 	function goForward() {
@@ -57,6 +59,7 @@
 		if (res.ok) {
 			const data = await res.json();
 			sessions = data.sessions;
+			if (sessions.length > 0) latestSessionId = sessions[0].id;
 		}
 	}
 
@@ -320,9 +323,9 @@
 		<div class="control-strip">
 			<button class="control-btn" disabled={currentTurnIndex === 0} onclick={goBack} title="Previous Turn"><Rewind size={14} /></button>
 			<button class="control-btn" disabled={currentTurnIndex >= turns.length - 1} onclick={goForward} title="Next Turn"><FastForward size={14} /></button>
-			<button class="control-btn" disabled={isPlaying} onclick={runPipeline} title="Play"><Play size={14} /></button>
+			<button class="control-btn" disabled={isPlaying || isViewingOldSession} onclick={runPipeline} title="Play"><Play size={14} /></button>
 			<button class="control-btn" disabled={!isPlaying} title="Pause"><Pause size={14} /></button>
-			<button class="control-btn" onclick={toggleRetryInput} disabled={turns.length === 0 || isPlaying} title="Retry"><RotateCcw size={14} /></button>
+			<button class="control-btn" onclick={toggleRetryInput} disabled={turns.length === 0 || isPlaying || isViewingOldSession} title="Retry"><RotateCcw size={14} /></button>
 			<button class="control-btn" onclick={resetAll} title="Restart All"><RotateCw size={14} /></button>
 			<span class="control-status">{isPlaying ? 'Running' : isPaused ? 'Paused' : 'Ready'}</span>
 			<span class="turn-counter">{turns.length > 0 ? `Turn ${currentTurnIndex + 1} / ${turns.length}` : 'No turns'}</span>
