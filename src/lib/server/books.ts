@@ -26,7 +26,7 @@ export interface CharacterSheet {
 const BOOK_FILES: Record<AgentRole, string> = {
 	'director': 'Director Book V2.md',
 	'actress': 'Actress Book V2.md',
-	'reviewer': 'Reviewer Book V1.md',
+	'reviewer': 'Reviewer Book V2.md',
 	'cutter': 'Cutter Book V2.md',
 	'archivist': 'Archivist Book V2.md',
 	'director-user': 'Director for User Book V2.md',
