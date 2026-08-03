@@ -157,7 +157,37 @@ export function mergeDirectorToPerformer(directorResult: DirectorResult): MergeR
 		};
 	}
 
-	const value = JSON.stringify({ world: directorResult.world, scene: directorResult.scene, checks: directorResult.checks, strategy: directorResult.strategy });
+	const parts: string[] = [];
+
+	if (directorResult.world) {
+		parts.push('What you know:');
+		const world = directorResult.world as Record<string, unknown>;
+		for (const [key, val] of Object.entries(world)) {
+			if (Array.isArray(val)) {
+				parts.push(val.map(v => `- ${v}`).join('\n'));
+			} else if (typeof val === 'string') {
+				parts.push(val);
+			}
+		}
+	}
+
+	if (directorResult.scene) {
+		parts.push('\nThis moment:');
+		const scene = directorResult.scene as Record<string, unknown>;
+		if (typeof scene === 'string') {
+			parts.push(scene);
+		} else {
+			for (const [key, val] of Object.entries(scene)) {
+				if (typeof val === 'string') {
+					parts.push(val);
+				} else if (Array.isArray(val)) {
+					parts.push(val.map(v => `- ${v}`).join('\n'));
+				}
+			}
+		}
+	}
+
+	const value = parts.join('\n');
 
 	return {
 		value,
