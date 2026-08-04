@@ -44,12 +44,12 @@ export interface AgentWindows {
 }
 
 const DEFAULT_WINDOWS: AgentWindows = {
-	director: 20,
+	director: 10,
 	actress: 5,
 	reviewer: 5,
 	cutter: 20,
 	archivist: 20,
-	directorUser: 20,
+	directorUser: 10,
 	actorUser: 5,
 };
 

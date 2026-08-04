@@ -97,7 +97,7 @@ export function mergeForDirectorUser(ctx: PipelineContext): MergeResult<string> 
 		parts.push(`ACCUMULATED MEMORY:\n${ctx.memoryContext}\n\n`);
 	}
 	if (ctx.transcript) {
-		parts.push(`CONVERSATION HISTORY:\n${ctx.transcript}\n\n`);
+		parts.push(`RECENT TURNS:\n${ctx.transcript}\n\n`);
 	}
 	parts.push(
 		ctx.lastSophieMessage
@@ -210,7 +210,7 @@ export function mergeForDirectorCharacter(
 		parts.push(`ACCUMULATED MEMORY:\n${ctx.memoryContext}\n\n`);
 	}
 	if (ctx.transcript) {
-		parts.push(`CONVERSATION HISTORY:\n${ctx.transcript}\n\n`);
+		parts.push(`RECENT TURNS:\n${ctx.transcript}\n\n`);
 	}
 	parts.push(`Marcus just said: ${marcusMessage}`);
 

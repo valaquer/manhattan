@@ -55,7 +55,7 @@ describe('mergeForDirectorUser', () => {
 		};
 		const result = mergeForDirectorUser(ctx);
 		expect(result.value).toContain('ACCUMULATED MEMORY:\n[tier1 | turn 1] some memory');
-		expect(result.value).toContain('CONVERSATION HISTORY:\nMarcus: hey\nSophie: hi');
+		expect(result.value).toContain('RECENT TURNS:\nMarcus: hey\nSophie: hi');
 		expect(result.value).toContain('Sophie just said: hi');
 		expect(result.meta.memoryIncluded).toBe(true);
 		expect(result.meta.transcriptTurns).toBe(2);
@@ -72,14 +72,14 @@ describe('mergeForDirectorUser', () => {
 		expect(result.meta.memoryIncluded).toBe(false);
 	});
 
-	it('omits CONVERSATION HISTORY when transcript is empty', () => {
+	it('omits RECENT TURNS when transcript is empty', () => {
 		const ctx: PipelineContext = {
 			memoryContext: 'some memory',
 			transcript: '',
 			lastSophieMessage: 'hi',
 		};
 		const result = mergeForDirectorUser(ctx);
-		expect(result.value).not.toContain('CONVERSATION HISTORY');
+		expect(result.value).not.toContain('RECENT TURNS');
 		expect(result.meta.transcriptTurns).toBe(0);
 	});
 
@@ -193,7 +193,7 @@ describe('mergeForDirectorCharacter', () => {
 		};
 		const result = mergeForDirectorCharacter(ctx, 'How was your day?');
 		expect(result.value).toContain('ACCUMULATED MEMORY');
-		expect(result.value).toContain('CONVERSATION HISTORY');
+		expect(result.value).toContain('RECENT TURNS');
 		expect(result.value).toContain('Marcus just said: How was your day?');
 		expect(result.meta.sourceStages).toContain('actor-for-user');
 	});
