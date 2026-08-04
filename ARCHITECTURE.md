@@ -79,7 +79,7 @@ Boss or Hana triggers pipeline:
   → POST /api/pipeline { characterId, message }
   → engine.ts orchestrates 5-agent pipeline:
     1. books.ts loads character sheet + identity header from wiki files
-    2. Director processes user message context
+    2. Director receives Cutter memory (ACCUMULATED MEMORY) + 5-turn sliding window (RECENT TURNS)
     3. Actress generates response using character personality
     4. Cutter refines and formats the response
     5. Each agent call → openrouter.ts → OpenRouter API
@@ -101,7 +101,7 @@ Conversation history:
 Touches: engine.ts only (imported). Reads 7 wiki books and 12 character sheets from `library/wiki/Relationship Engine/`. Changes to book file paths or section parsing affect all pipeline runs. Character sheet format depends on exact `## CANON -- {field}` headers -- format mismatch fails silently (returns empty string).
 
 ### engine.ts
-Touches: pipeline/+server.ts only. All chat turns flow through here. Changes affect every pipeline run.
+Touches: pipeline/+server.ts only. All chat turns flow through here. Changes affect every pipeline run. Director window defaults: 10 message rows (5 turns) for both Director-for-User and Director-for-Character. Actress window: 5 message rows (~2.5 turns). Configurable via `PipelineConfig.windows`.
 
 ### merge.ts
 Touches: engine.ts only. Zero framework dependencies -- designed to port to Prague as pure TypeScript. Changes must maintain zero-dep constraint.
