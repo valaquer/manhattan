@@ -82,6 +82,32 @@
 	onMount(() => {
 		loadTurns();
 		loadSessions();
+
+		function handleKeydown(e: KeyboardEvent) {
+			if (!e.ctrlKey) return;
+			const tag = (e.target as HTMLElement)?.tagName;
+			if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+			if ((e.target as HTMLElement)?.isContentEditable) return;
+
+			if (e.key === 'ArrowLeft') {
+				e.preventDefault();
+				goBack();
+			} else if (e.key === 'ArrowRight') {
+				e.preventDefault();
+				goForward();
+			} else if (e.key === 'ArrowUp') {
+				e.preventDefault();
+				const idx = sessions.findIndex(s => s.id === activeSessionId);
+				if (idx > 0) switchSession(sessions[idx - 1].id);
+			} else if (e.key === 'ArrowDown') {
+				e.preventDefault();
+				const idx = sessions.findIndex(s => s.id === activeSessionId);
+				if (idx >= 0 && idx < sessions.length - 1) switchSession(sessions[idx + 1].id);
+			}
+		}
+
+		window.addEventListener('keydown', handleKeydown);
+		return () => window.removeEventListener('keydown', handleKeydown);
 	});
 
 	// === Run pipeline ===
@@ -370,7 +396,7 @@
 			{/if}
 		</div>
 		<div class="hb-sidebar-footer">
-			Cache: M19
+			Cache: N20
 		</div>
 	</div>
 
