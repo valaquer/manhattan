@@ -64,20 +64,33 @@ export const GET: RequestHandler = async ({ url }) => {
 	// Interleave Klara reviews after each agent block
 	for (const [turnNum, blocks] of turnMap) {
 		const reviews = getKlaraReviews(sessionId, turnNum);
-		const reviewMap = new Map<string, string>();
-		for (const r of reviews) reviewMap.set(r.stage, r.review);
+		const reviewsByStage = new Map<string, string[]>();
+		for (const r of reviews) {
+			if (!reviewsByStage.has(r.stage)) reviewsByStage.set(r.stage, []);
+			reviewsByStage.get(r.stage)!.push(r.review);
+		}
 
 		const interleaved: typeof blocks = [];
 		for (const block of blocks) {
 			interleaved.push(block);
-			const review = reviewMap.get(block.type);
-			if (review) {
-				interleaved.push({ type: 'klara', sender: `Klara on ${block.type}`, content: review });
-				reviewMap.delete(block.type);
+			const stageReviews = reviewsByStage.get(block.type);
+			if (stageReviews) {
+				const wiring = stageReviews.filter(r => r.startsWith('[WIRING]'));
+				const messages = stageReviews.filter(r => r.startsWith('[MESSAGES]'));
+				const other = stageReviews.filter(r => !r.startsWith('[WIRING]') && !r.startsWith('[MESSAGES]'));
+				const ordered = [...wiring, ...messages, ...other];
+				const content = ordered.join('\n\n');
+				interleaved.push({ type: 'klara', sender: `Klara on ${block.type}`, content });
+				reviewsByStage.delete(block.type);
 			}
 		}
-		for (const [stage, review] of reviewMap) {
-			interleaved.push({ type: 'klara', sender: `Klara on ${stage}`, content: review });
+		for (const [stage, stageReviews] of reviewsByStage) {
+			const wiring = stageReviews.filter(r => r.startsWith('[WIRING]'));
+			const messages = stageReviews.filter(r => r.startsWith('[MESSAGES]'));
+			const other = stageReviews.filter(r => !r.startsWith('[WIRING]') && !r.startsWith('[MESSAGES]'));
+			const ordered = [...wiring, ...messages, ...other];
+			const content = ordered.join('\n\n');
+			interleaved.push({ type: 'klara', sender: `Klara on ${stage}`, content });
 		}
 		turnMap.set(turnNum, interleaved);
 	}

@@ -404,7 +404,7 @@
 			{/if}
 		</div>
 		<div class="hb-sidebar-footer">
-			Cache: P21
+			Cache: Q22
 		</div>
 	</div>
 
