@@ -107,7 +107,15 @@
 		}
 
 		window.addEventListener('keydown', handleKeydown);
-		return () => window.removeEventListener('keydown', handleKeydown);
+
+		const sse = new EventSource('/api/klara-events');
+		sse.onmessage = () => loadTurns(activeSessionId ?? undefined);
+		sse.onopen = () => loadTurns(activeSessionId ?? undefined);
+
+		return () => {
+			window.removeEventListener('keydown', handleKeydown);
+			sse.close();
+		};
 	});
 
 	// === Run pipeline ===
@@ -396,7 +404,7 @@
 			{/if}
 		</div>
 		<div class="hb-sidebar-footer">
-			Cache: N20
+			Cache: P21
 		</div>
 	</div>
 

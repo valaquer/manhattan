@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getOrCreateSession, saveKlaraReview } from '$lib/server/db';
+import { emitReview } from '$lib/server/events';
 
 export const POST: RequestHandler = async ({ request }) => {
 	const body = await request.json();
@@ -12,5 +13,6 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 
 	const id = saveKlaraReview(sessionId, turnNumber, stage, review);
+	emitReview(sessionId, turnNumber, stage);
 	return json({ ok: true, id });
 };
