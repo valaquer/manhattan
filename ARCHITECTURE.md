@@ -122,8 +122,11 @@ Touches: books.ts reads at runtime. Hana's team maintains. Changes to book struc
 ### Keyboard navigation
 CTRL+Left/Right navigates turns (calls goBack/goForward). CTRL+Up/Down navigates sessions (newer/older). Focus guard skips when target is INPUT/TEXTAREA/SELECT/contentEditable. Listener attached in onMount with cleanup.
 
+### Klara review display
+Multiple reviews per stage are collected into arrays (not overwritten by Map). Within each stage block, reviews are sorted: [WIRING] first, [MESSAGES] second, joined with `\n\n` separator in `turns/+server.ts`. Client-side (`+page.svelte`) splits klara block content on `\n\n` before `[WIRING]` or `[MESSAGES]` prefixes and renders each segment as a separate paragraph. Multi-paragraph content within a single prefix group is preserved.
+
 ### Klara review SSE
-`events.ts` provides an in-memory EventTarget. `POST /api/klara-review` emits after save. `GET /api/klara-events` streams events to the client via SSE (15s keepalive). `+page.svelte` subscribes via EventSource, reloads turns on each event and on reconnection.
+`events.ts` provides an in-memory EventTarget. `POST /api/klara-review` emits after save. `GET /api/klara-events` streams events to the client via SSE (15s keepalive, `closed` flag guards against enqueue-after-close crashes). `+page.svelte` subscribes via EventSource, reloads turns on each event and on reconnection.
 
 ### Character sheet parsing fragile
 Canon section parsing depends on exact `## CANON -- {field}` header format. Format mismatch returns empty string with no error. Books.test.ts covers 12 character sheets but doesn't test format deviation.

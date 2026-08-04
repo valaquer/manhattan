@@ -6,24 +6,30 @@ export const GET: RequestHandler = async () => {
 		start(controller) {
 			const encoder = new TextEncoder();
 
+			let closed = false;
+
 			const cleanup = onReview((e: CustomEvent) => {
-				const data = JSON.stringify(e.detail);
-				controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+				if (closed) return;
+				try {
+					const data = JSON.stringify(e.detail);
+					controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+				} catch {
+					closed = true;
+					clearInterval(keepalive);
+					cleanup();
+				}
 			});
 
 			const keepalive = setInterval(() => {
-				controller.enqueue(encoder.encode(': keepalive\n\n'));
-			}, 15000);
-
-			const checkClosed = setInterval(() => {
+				if (closed) return;
 				try {
-					controller.enqueue(encoder.encode(''));
+					controller.enqueue(encoder.encode(': keepalive\n\n'));
 				} catch {
+					closed = true;
 					clearInterval(keepalive);
-					clearInterval(checkClosed);
 					cleanup();
 				}
-			}, 30000);
+			}, 15000);
 		},
 	});
 

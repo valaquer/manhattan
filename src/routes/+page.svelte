@@ -404,7 +404,7 @@
 			{/if}
 		</div>
 		<div class="hb-sidebar-footer">
-			Cache: Q22
+			Cache: R23
 		</div>
 	</div>
 
@@ -467,7 +467,13 @@
 								{#if isJson(block.type)}
 									<pre class="block-json">{block.content}</pre>
 								{:else}
-									<p class="block-text" style="color: {blockColor(block.type)};">{block.content}</p>
+									{#if block.type === 'klara'}
+										{#each block.content.split(/\n\n(?=\[WIRING\]|\[MESSAGES\])/) as segment}
+											<p class="block-text" style="color: {blockColor(block.type)};">{segment}</p>
+										{/each}
+									{:else}
+										<p class="block-text" style="color: {blockColor(block.type)};">{block.content}</p>
+									{/if}
 								{/if}
 							</div>
 						</div>
