@@ -17,6 +17,7 @@ library/manhattan-app/                 # App codebase (git: valaquer/manhattan)
 │   │       ├── engine.test.ts        # 20 tests
 │   │       ├── merge.ts             # Merge/parse for pipeline data (zero framework deps)
 │   │       ├── merge.test.ts        # 19 tests
+│   │       ├── moderation.ts        # OpenAI Moderation API client (content classifier)
 │   │       ├── db.ts                # SQLite: messages, pipeline_outputs, memory
 │   │       └── openrouter.ts        # OpenRouter API client (callModel, streamModel)
 │   └── routes/
@@ -46,6 +47,7 @@ library/wiki/Relationship Engine/      # Book + character content (NOT in app re
 pipeline/+server.ts
   → engine.ts (5-agent pipeline orchestrator)
     → books.ts → wiki files (filesystem read from library/wiki/Relationship Engine/)
+    → moderation.ts → OpenAI Moderation API (content classifier, advisory)
     → db.ts → manhattan.db (SQLite)
     → openrouter.ts → OpenRouter API (external)
     → merge.ts (pure TypeScript, zero framework deps)
@@ -58,6 +60,11 @@ sessions/+server.ts → db.ts (list all sessions with turn counts)
 ### External Dependencies
 
 ```
+OpenAI Moderation API
+  Used by: moderation.ts for content classification (advisory input to Director)
+  Auth: API key via Burt ($env/dynamic/private OPENAI_API_KEY)
+  Graceful degradation: returns null on missing key or API failure; pipeline runs without flags
+
 OpenRouter API
   Used by: openrouter.ts for model calls (callModel, streamModel)
   Auth: API key via Burt

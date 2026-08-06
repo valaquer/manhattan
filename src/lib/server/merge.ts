@@ -203,6 +203,7 @@ export function mergeDirectorToPerformer(directorResult: DirectorResult): MergeR
 export function mergeForDirectorCharacter(
 	ctx: PipelineContext, marcusMessage: string,
 	retry?: { rejectedTake: string; feedback: string },
+	moderationFlags?: string,
 ): MergeResult<string> {
 	const parts: string[] = [];
 
@@ -211,6 +212,9 @@ export function mergeForDirectorCharacter(
 	}
 	if (ctx.transcript) {
 		parts.push(`RECENT TURNS:\n${ctx.transcript}\n\n`);
+	}
+	if (moderationFlags) {
+		parts.push(`${moderationFlags}\n\n`);
 	}
 	parts.push(`Marcus just said: ${marcusMessage}`);
 

@@ -30,6 +30,7 @@ import {
 	parseCutterOutput,
 } from '$lib/server/merge';
 import type { PipelineContext, MergeMeta } from '$lib/server/merge';
+import { classifyMessage, renderModerationFlags } from '$lib/server/moderation';
 
 // --- Configuration ---
 
@@ -247,7 +248,15 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 			userMessage = latestMessages[latestMessages.length - 1]?.content ?? '';
 		}
 
-		const directorMerge = mergeForDirectorCharacter(directorCtx, userMessage, config.retry);
+		// Content classifier -- advisory input for the Director's compliance judgment
+		const moderationResult = await classifyMessage(userMessage);
+		const moderationFlags = renderModerationFlags(moderationResult);
+		if (moderationResult) {
+			savePipelineOutput(sessionId, turnNumber, 'content-classifier', 'openai-moderation',
+				JSON.stringify({ flagged: moderationResult.flagged, categories: moderationResult.categories }));
+		}
+
+		const directorMerge = mergeForDirectorCharacter(directorCtx, userMessage, config.retry, moderationFlags);
 
 		allMeta['director'] = directorMerge.meta;
 
