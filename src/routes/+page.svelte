@@ -13,6 +13,8 @@
 		completionTokens?: number | null;
 		costUsd?: number | null;
 		model?: string;
+		systemPrompt?: string | null;
+		userContent?: string | null;
 	}
 
 	interface Turn {
@@ -194,7 +196,7 @@
 						turns = [...turns];
 					} else if (event.type === 'stage') {
 						const currentTurn = turns[currentTurnIndex];
-						currentTurn.blocks = [...currentTurn.blocks, { type: event.stage, sender: event.stage, content: event.content }];
+						currentTurn.blocks = [...currentTurn.blocks, { type: event.stage, sender: event.stage, content: event.content, systemPrompt: event.systemPrompt, userContent: event.userContent }];
 						turns = [...turns];
 					} else if (event.type === 'warning') {
 						const currentTurn = turns[currentTurnIndex];
@@ -464,17 +466,32 @@
 								{/if}
 							</div>
 							<div class="block-content" style="border-left: 2px solid {blockColor(block.type)};">
-								{#if isJson(block.type)}
-									<pre class="block-json">{block.content}</pre>
-								{:else}
-									{#if block.type === 'klara'}
-										{#each block.content.split(/\n\n(?=\[WIRING\]|\[MESSAGES\])/) as segment}
-											<p class="block-text" style="color: {blockColor(block.type)};">{segment}</p>
-										{/each}
-									{:else}
-										<p class="block-text" style="color: {blockColor(block.type)};">{block.content}</p>
-									{/if}
+								{#if block.systemPrompt || block.userContent}
+									<details open class="input-section">
+										<summary class="input-summary">Input</summary>
+										{#if block.systemPrompt}
+											<pre class="block-input">{block.systemPrompt}</pre>
+											{#if block.userContent}<hr class="input-separator" />{/if}
+										{/if}
+										{#if block.userContent}
+											<pre class="block-input">{block.userContent}</pre>
+										{/if}
+									</details>
 								{/if}
+								<details open class="input-section">
+									<summary class="input-summary">Output</summary>
+									{#if isJson(block.type)}
+										<pre class="block-json">{block.content}</pre>
+									{:else}
+										{#if block.type === 'klara'}
+											{#each block.content.split(/\n\n(?=\[WIRING\]|\[MESSAGES\])/) as segment}
+												<p class="block-text" style="color: {blockColor(block.type)};">{segment}</p>
+											{/each}
+										{:else}
+											<p class="block-text" style="color: {blockColor(block.type)};">{block.content}</p>
+										{/if}
+									{/if}
+								</details>
 							</div>
 						</div>
 					{/each}
@@ -652,6 +669,38 @@
 		white-space: pre-wrap;
 		overflow-wrap: break-word;
 		opacity: 0.7;
+	}
+
+	.input-section {
+		margin-bottom: 8px;
+	}
+
+	.input-summary {
+		cursor: pointer;
+		font-size: 10px;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		color: #666;
+		user-select: none;
+		padding: 4px 0;
+	}
+
+	.input-separator {
+		border: none;
+		border-top: 1px dashed #444;
+		margin: 8px 0;
+	}
+
+	.block-input {
+		font-size: 11px;
+		line-height: 1.5;
+		color: #777;
+		margin: 4px 0 0 0;
+		white-space: pre-wrap;
+		overflow-wrap: break-word;
+		opacity: 0.7;
+		max-height: 600px;
+		overflow-y: auto;
 	}
 
 	/* --- Klara annotation style --- */

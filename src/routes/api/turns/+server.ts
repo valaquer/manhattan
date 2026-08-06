@@ -15,8 +15,8 @@ export const GET: RequestHandler = async ({ url }) => {
 
 	// Get all pipeline outputs grouped by turn
 	const outputs = db.prepare(
-		'SELECT turn_number, stage, model, content, prompt_tokens, completion_tokens, model_params FROM pipeline_outputs WHERE session_id = ? ORDER BY id'
-	).all(sessionId) as Array<{ turn_number: number; stage: string; model: string; content: string; prompt_tokens: number | null; completion_tokens: number | null; model_params: string | null }>;
+		'SELECT turn_number, stage, model, content, prompt_tokens, completion_tokens, model_params, system_prompt, user_content FROM pipeline_outputs WHERE session_id = ? ORDER BY id'
+	).all(sessionId) as Array<{ turn_number: number; stage: string; model: string; content: string; prompt_tokens: number | null; completion_tokens: number | null; model_params: string | null; system_prompt: string | null; user_content: string | null }>;
 
 	// Get all messages
 	const messages = getAllMessages(sessionId);
@@ -46,6 +46,8 @@ export const GET: RequestHandler = async ({ url }) => {
 			completionTokens: o.completion_tokens,
 			costUsd,
 			model: o.model,
+			systemPrompt: o.system_prompt,
+			userContent: o.user_content,
 		});
 	}
 

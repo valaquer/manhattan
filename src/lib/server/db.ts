@@ -118,10 +118,11 @@ export function getAllMessages(sessionId: number): Array<{ sender: string; conte
 export function savePipelineOutput(
 	sessionId: number, turnNumber: number, stage: string, model: string, content: string,
 	promptTokens?: number, completionTokens?: number, modelParams?: string, attempt?: number,
+	systemPrompt?: string, userContent?: string,
 ): number {
 	return db.prepare(
-		'INSERT INTO pipeline_outputs (session_id, turn_number, stage, model, content, prompt_tokens, completion_tokens, model_params, attempt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-	).run(sessionId, turnNumber, stage, model, content, promptTokens ?? null, completionTokens ?? null, modelParams ?? null, attempt ?? 1).lastInsertRowid as number;
+		'INSERT INTO pipeline_outputs (session_id, turn_number, stage, model, content, prompt_tokens, completion_tokens, model_params, attempt, system_prompt, user_content) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+	).run(sessionId, turnNumber, stage, model, content, promptTokens ?? null, completionTokens ?? null, modelParams ?? null, attempt ?? 1, systemPrompt ?? null, userContent ?? null).lastInsertRowid as number;
 }
 
 // === Memory Queries (Cutter extractions — living state) ===

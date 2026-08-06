@@ -95,7 +95,7 @@ const DIRECTOR_PARAMS: Record<string, Record<string, number | string>> = {
 // --- Pipeline Events ---
 
 export type PipelineEvent =
-	| { type: 'stage'; stage: string; content: string; model: string; meta?: MergeMeta; attempt?: number }
+	| { type: 'stage'; stage: string; content: string; model: string; meta?: MergeMeta; attempt?: number; systemPrompt?: string; userContent?: string }
 	| { type: 'generating'; stage: string }
 	| { type: 'retry'; stage: string; attempt: number; fault: string }
 	| { type: 'fallback'; stage: string; content: string; reason: string }
@@ -202,8 +202,8 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 				: JSON.stringify({ world: dirUserResult.world, scene: dirUserResult.scene, checks: dirUserResult.checks, strategy: dirUserResult.strategy }, null, 2);
 
 			savePipelineOutput(sessionId, turnNumber, 'director-for-user', models.director, dirUserContent,
-				dirUserCall.usage?.prompt_tokens, dirUserCall.usage?.completion_tokens, JSON.stringify(dirUserParams));
-			yield { type: 'stage', stage: 'director-for-user', content: dirUserContent, model: models.director, meta: dirUserMerge.meta };
+				dirUserCall.usage?.prompt_tokens, dirUserCall.usage?.completion_tokens, JSON.stringify(dirUserParams), undefined, dirUserPrompt, dirUserMerge.value);
+			yield { type: 'stage', stage: 'director-for-user', content: dirUserContent, model: models.director, meta: dirUserMerge.meta, systemPrompt: dirUserPrompt, userContent: dirUserMerge.value };
 
 			if (dirUserResult.refused) {
 				savePipelineOutput(sessionId, turnNumber, 'actor-for-user', models.actress, '[SKIPPED: Director refused]');
@@ -231,8 +231,8 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 			userMessage = actorCall.content.trim();
 			saveMessage(sessionId, turnNumber, 'Marcus', userMessage);
 			savePipelineOutput(sessionId, turnNumber, 'actor-for-user', models.actress, userMessage,
-				actorCall.usage?.prompt_tokens, actorCall.usage?.completion_tokens, JSON.stringify(actorParams));
-			yield { type: 'stage', stage: 'actor-for-user', content: userMessage, model: models.actress, meta: actorMerge.meta };
+				actorCall.usage?.prompt_tokens, actorCall.usage?.completion_tokens, JSON.stringify(actorParams), undefined, actorPrompt, actorMerge.value as string);
+			yield { type: 'stage', stage: 'actor-for-user', content: userMessage, model: models.actress, meta: actorMerge.meta, systemPrompt: actorPrompt, userContent: actorMerge.value as string };
 			allMeta['actor-for-user'] = actorMerge.meta;
 		}
 
@@ -253,7 +253,9 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 		const moderationFlags = renderModerationFlags(moderationResult);
 		if (moderationResult) {
 			savePipelineOutput(sessionId, turnNumber, 'content-classifier', 'openai-moderation',
-				JSON.stringify({ flagged: moderationResult.flagged, categories: moderationResult.categories }));
+				JSON.stringify({ flagged: moderationResult.flagged, categories: moderationResult.categories }),
+				undefined, undefined, undefined, undefined, undefined, userMessage);
+			yield { type: 'stage', stage: 'content-classifier', content: JSON.stringify({ flagged: moderationResult.flagged, categories: moderationResult.categories }), model: 'openai-moderation', userContent: userMessage };
 		}
 
 		const directorMerge = mergeForDirectorCharacter(directorCtx, userMessage, config.retry, moderationFlags);
@@ -286,8 +288,8 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 			: JSON.stringify({ world: directorResult.world, scene: directorResult.scene, checks: directorResult.checks, strategy: directorResult.strategy }, null, 2);
 
 		savePipelineOutput(sessionId, turnNumber, 'director-for-character', models.director, directorContent,
-			dirCharCall.usage?.prompt_tokens, dirCharCall.usage?.completion_tokens, JSON.stringify(dirCharParams), attempt);
-		yield { type: 'stage', stage: 'director-for-character', content: directorContent, model: models.director, meta: directorMerge.meta };
+			dirCharCall.usage?.prompt_tokens, dirCharCall.usage?.completion_tokens, JSON.stringify(dirCharParams), attempt, directorPrompt, directorUserContent);
+		yield { type: 'stage', stage: 'director-for-character', content: directorContent, model: models.director, meta: directorMerge.meta, systemPrompt: directorPrompt, userContent: directorUserContent };
 
 		if (directorResult.refused) {
 			savePipelineOutput(sessionId, turnNumber, 'actress-for-character', models.actress, '[SKIPPED: Director refused]');
@@ -346,8 +348,8 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 			);
 
 			savePipelineOutput(sessionId, turnNumber, 'reviewer', models.reviewer, reviewCall.content,
-				reviewCall.usage?.prompt_tokens, reviewCall.usage?.completion_tokens, JSON.stringify(reviewerParams), attempt);
-			yield { type: 'stage', stage: 'reviewer', content: reviewCall.content, model: models.reviewer };
+				reviewCall.usage?.prompt_tokens, reviewCall.usage?.completion_tokens, JSON.stringify(reviewerParams), attempt, reviewerPrompt, reviewInput);
+			yield { type: 'stage', stage: 'reviewer', content: reviewCall.content, model: models.reviewer, systemPrompt: reviewerPrompt, userContent: reviewInput };
 			const verdict = parseReviewerVerdict(reviewCall.content);
 			reviewAttempt = 1;
 
@@ -420,11 +422,12 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 			saveMessage(sessionId, turnNumber, config.characterName, characterResponse);
 		}
 		savePipelineOutput(sessionId, turnNumber, 'actress-for-character', models.actress, characterResponse,
-			actressUsage?.prompt_tokens, actressUsage?.completion_tokens, JSON.stringify(actressParams), attempt);
+			actressUsage?.prompt_tokens, actressUsage?.completion_tokens, JSON.stringify(actressParams), attempt, actressSystemPrompt, actressUserContent);
 		yield {
 			type: 'stage', stage: 'actress-for-character', content: characterResponse,
 			model: models.actress, meta: actressMerge.meta,
 			attempt: reviewAttempt > 1 ? reviewAttempt : undefined,
+			systemPrompt: actressSystemPrompt, userContent: actressUserContent,
 		};
 
 		// === Call 5: Cutter ===
@@ -466,8 +469,8 @@ export async function* runPipeline(config: PipelineConfig): AsyncGenerator<Pipel
 			}
 
 			savePipelineOutput(sessionId, turnNumber, 'artisan-cutter', models.cutter, cutterContent,
-				cutterCall.usage?.prompt_tokens, cutterCall.usage?.completion_tokens, JSON.stringify(cutterParams), attempt);
-			yield { type: 'stage', stage: 'artisan-cutter', content: cutterContent, model: models.cutter, meta: cutterMerge.meta };
+				cutterCall.usage?.prompt_tokens, cutterCall.usage?.completion_tokens, JSON.stringify(cutterParams), attempt, cutterPrompt, cutterMerge.value);
+			yield { type: 'stage', stage: 'artisan-cutter', content: cutterContent, model: models.cutter, meta: cutterMerge.meta, systemPrompt: cutterPrompt, userContent: cutterMerge.value };
 		} catch (cutterErr) {
 			const errMsg = cutterErr instanceof Error ? cutterErr.message : String(cutterErr);
 			yield { type: 'warning', stage: 'cutter', error: errMsg };
