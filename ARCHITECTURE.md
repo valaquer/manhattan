@@ -141,6 +141,12 @@ Canon section parsing depends on exact `## CANON -- {field}` header format. Form
 ### Port-readiness constraint
 merge.ts is designed to port to Prague. Must maintain zero framework dependencies. Any change that adds a dependency breaks the port path.
 
+### Pipeline transparency (A25/A26/A27)
++page.svelte displays full input (system_prompt + user_content merged into single "Input" section) and output for every agent in collapsible sections. DB stores system_prompt and user_content per pipeline_outputs row for historical browsing. Input sections render at full height with no inner scrolling (max-height/overflow-y removed in A27).
+
+### Content classifier (A16)
+moderation.ts calls OpenAI Moderation API on user messages. Returns filtered category flags (8 criminal-statute-mapped categories, `sexual` suppressed). Flags are advisory input to Director tray item 12. Graceful degradation: returns null on missing key or API failure.
+
 ### Ownership split
 UI/infrastructure/API wiring owned by OPS. Prompt engineering/pipeline design owned by Hana's team. Changes to engine.ts require coordination.
 
