@@ -699,8 +699,6 @@
 		white-space: pre-wrap;
 		overflow-wrap: break-word;
 		opacity: 0.7;
-		max-height: 600px;
-		overflow-y: auto;
 	}
 
 	/* --- Klara annotation style --- */
