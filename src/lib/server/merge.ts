@@ -80,12 +80,27 @@ function parseJsonFromText(text: string): unknown {
 // --- Formatters ---
 
 export function formatTranscript(messages: Array<{ sender: string; content: string }>): string {
-	return messages.map(m => `${m.sender}: ${m.content}`).join('\n');
+	const pairs: string[] = [];
+	for (let i = 0; i < messages.length; i += 2) {
+		const first = `**${messages[i].sender}:** ${messages[i].content}`;
+		const second = i + 1 < messages.length ? `\n\n**${messages[i + 1].sender}:** ${messages[i + 1].content}` : '';
+		pairs.push(first + second);
+	}
+	return pairs.join('\n\n---\n\n');
 }
 
 export function formatMemoryContext(memories: Array<{ type: string; content: string; turn_updated: number }>): string {
 	if (memories.length === 0) return '';
-	return memories.map(m => `[${m.type} | turn ${m.turn_updated}] ${m.content}`).join('\n');
+	const groups = new Map<number, Array<{ type: string; content: string }>>();
+	for (const m of memories) {
+		if (!groups.has(m.turn_updated)) groups.set(m.turn_updated, []);
+		groups.get(m.turn_updated)!.push({ type: m.type, content: m.content });
+	}
+	const turns = Array.from(groups.entries()).sort(([a], [b]) => a - b);
+	return turns.map(([turn, entries]) => {
+		const lines = entries.map(e => `**${e.type}:** ${e.content}`);
+		return `### Turn ${turn}\n${lines.join('\n\n')}`;
+	}).join('\n\n---\n\n');
 }
 
 // --- Merge functions ---
@@ -94,10 +109,10 @@ export function mergeForDirectorUser(ctx: PipelineContext): MergeResult<string> 
 	const parts: string[] = [];
 
 	if (ctx.memoryContext) {
-		parts.push(`ACCUMULATED MEMORY:\n${ctx.memoryContext}\n\n`);
+		parts.push(`## ACCUMULATED MEMORY\n\n${ctx.memoryContext}\n\n`);
 	}
 	if (ctx.transcript) {
-		parts.push(`RECENT TURNS:\n${ctx.transcript}\n\n`);
+		parts.push(`## RECENT TURNS\n\n${ctx.transcript}\n\n`);
 	}
 	parts.push(
 		ctx.lastSophieMessage
@@ -208,10 +223,10 @@ export function mergeForDirectorCharacter(
 	const parts: string[] = [];
 
 	if (ctx.memoryContext) {
-		parts.push(`ACCUMULATED MEMORY:\n${ctx.memoryContext}\n\n`);
+		parts.push(`## ACCUMULATED MEMORY\n\n${ctx.memoryContext}\n\n`);
 	}
 	if (ctx.transcript) {
-		parts.push(`RECENT TURNS:\n${ctx.transcript}\n\n`);
+		parts.push(`## RECENT TURNS\n\n${ctx.transcript}\n\n`);
 	}
 	if (moderationFlags) {
 		parts.push(`${moderationFlags}\n\n`);
@@ -219,8 +234,8 @@ export function mergeForDirectorCharacter(
 	parts.push(`Marcus just said: ${marcusMessage}`);
 
 	if (retry) {
-		parts.push(`\n\nREJECTED TAKE:\n${retry.rejectedTake}`);
-		parts.push(`\n\nUSER FEEDBACK:\n${retry.feedback}`);
+		parts.push(`\n\n## REJECTED TAKE\n\n${retry.rejectedTake}`);
+		parts.push(`\n\n## USER FEEDBACK\n\n${retry.feedback}`);
 	}
 
 	const value = parts.join('');
@@ -241,7 +256,7 @@ export function mergeForCutter(memoryContext: string, marcusMessage: string, sop
 	const parts: string[] = [];
 
 	if (memoryContext) {
-		parts.push(`PRIOR EXTRACTIONS:\n${memoryContext}\n\n`);
+		parts.push(`## PRIOR EXTRACTIONS\n\n${memoryContext}\n\n`);
 	}
 	parts.push(`CURRENT TURN:\nMarcus: ${marcusMessage}\n\nSophie: ${sophieMessage}`);
 

@@ -19,7 +19,7 @@ describe('formatTranscript', () => {
 			{ sender: 'Marcus', content: 'Hello Sophie' },
 			{ sender: 'Sophie', content: 'Hi Marcus!' },
 		];
-		expect(formatTranscript(messages)).toBe('Marcus: Hello Sophie\nSophie: Hi Marcus!');
+		expect(formatTranscript(messages)).toBe('**Marcus:** Hello Sophie\n\n**Sophie:** Hi Marcus!');
 	});
 
 	it('returns empty string for empty array', () => {
@@ -36,7 +36,7 @@ describe('formatMemoryContext', () => {
 			{ type: 'emotion_echo', content: 'curious and open', turn_updated: 3 },
 		];
 		const result = formatMemoryContext(memories);
-		expect(result).toBe('[tier1 | turn 2] {"his_real_life": ["lives alone"]}\n[emotion_echo | turn 3] curious and open');
+		expect(result).toBe('### Turn 2\n**tier1:** {"his_real_life": ["lives alone"]}\n\n---\n\n### Turn 3\n**emotion_echo:** curious and open');
 	});
 
 	it('returns empty string for empty array', () => {
@@ -54,8 +54,8 @@ describe('mergeForDirectorUser', () => {
 			lastSophieMessage: 'hi',
 		};
 		const result = mergeForDirectorUser(ctx);
-		expect(result.value).toContain('ACCUMULATED MEMORY:\n[tier1 | turn 1] some memory');
-		expect(result.value).toContain('RECENT TURNS:\nMarcus: hey\nSophie: hi');
+		expect(result.value).toContain('## ACCUMULATED MEMORY\n\n[tier1 | turn 1] some memory');
+		expect(result.value).toContain('## RECENT TURNS\n\nMarcus: hey\nSophie: hi');
 		expect(result.value).toContain('Sophie just said: hi');
 		expect(result.meta.memoryIncluded).toBe(true);
 		expect(result.meta.transcriptTurns).toBe(2);
@@ -187,8 +187,8 @@ describe('mergeDirectorToPerformer', () => {
 describe('mergeForDirectorCharacter', () => {
 	it('concatenates memory, transcript, and Marcus message', () => {
 		const ctx: PipelineContext = {
-			memoryContext: '[tier1 | turn 1] memory data',
-			transcript: 'Marcus: hey\nSophie: hi',
+			memoryContext: '**tier1** (turn 1): memory data',
+			transcript: '**Marcus:** hey\n\n**Sophie:** hi',
 			lastSophieMessage: 'hi',
 		};
 		const result = mergeForDirectorCharacter(ctx, 'How was your day?');
@@ -214,7 +214,7 @@ describe('mergeForDirectorCharacter', () => {
 describe('mergeForCutter', () => {
 	it('includes prior extractions and current turn', () => {
 		const result = mergeForCutter('[tier1 | turn 1] facts', 'Hey there', 'Hi! How are you?');
-		expect(result.value).toContain('PRIOR EXTRACTIONS:\n[tier1 | turn 1] facts');
+		expect(result.value).toContain('## PRIOR EXTRACTIONS\n\n[tier1 | turn 1] facts');
 		expect(result.value).toContain('CURRENT TURN:\nMarcus: Hey there\n\nSophie: Hi! How are you?');
 		expect(result.meta.memoryIncluded).toBe(true);
 	});
@@ -223,6 +223,7 @@ describe('mergeForCutter', () => {
 		const result = mergeForCutter('', 'Hello', 'Hi!');
 		expect(result.value).not.toContain('PRIOR EXTRACTIONS');
 		expect(result.value).toBe('CURRENT TURN:\nMarcus: Hello\n\nSophie: Hi!');
+
 		expect(result.meta.memoryIncluded).toBe(false);
 	});
 

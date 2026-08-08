@@ -2,6 +2,46 @@
 	// Manhattan --Director/Actress/Cutter Pipeline Workbench
 	import { Rewind, FastForward, Play, Pause, RotateCcw, RotateCw } from 'lucide-svelte';
 	import { onMount } from 'svelte';
+	import { Marked } from 'marked';
+
+	const md = new Marked({ breaks: true, gfm: true });
+
+	function renderMd(text: string | null | undefined): string {
+		if (!text) return '';
+		const raw = md.parse(text) as string;
+		return raw.replace(/<script[\s\S]*?<\/script>/gi, '');
+	}
+
+	interface MdSection { title: string; content: string }
+
+	function splitSections(html: string): MdSection[] {
+		const parts = html.split(/(?=<h2[^>]*>)/);
+		const sections: MdSection[] = [];
+		for (const part of parts) {
+			const match = part.match(/^<h2[^>]*>(.*?)<\/h2>([\s\S]*)/);
+			if (match) {
+				sections.push({ title: match[1], content: match[2] });
+			} else if (part.trim()) {
+				sections.push({ title: 'Preamble', content: part });
+			}
+		}
+		return sections;
+	}
+
+	function handleModuleAccordion(event: Event) {
+		if (accordionGuard) return;
+		const target = event.target as HTMLDetailsElement;
+		if (!target.open) return;
+
+		accordionGuard = true;
+		const parent = target.closest('.input-section');
+		if (parent) {
+			parent.querySelectorAll('details.module-section[open]').forEach(d => {
+				if (d !== target) (d as HTMLDetailsElement).open = false;
+			});
+		}
+		accordionGuard = false;
+	}
 
 	// === Types ===
 	interface TurnBlock {
@@ -328,6 +368,28 @@
 	function isJson(type: string): boolean {
 		return type === 'director' || type === 'cutter' || type === 'director-for-user' || type === 'director-for-character' || type === 'artisan-cutter' || type === 'reviewer';
 	}
+
+	function isDialogueOutput(type: string): boolean {
+		return type === 'actor-for-user' || type === 'actress-for-character';
+	}
+
+	let accordionGuard = false;
+	function handleAccordion(event: Event) {
+		if (accordionGuard) return;
+		const target = event.target as HTMLDetailsElement;
+		if (!target.open || target.hasAttribute('data-immune')) return;
+
+		accordionGuard = true;
+		const turnGroup = target.closest('.turn-group');
+		if (turnGroup) {
+			turnGroup.querySelectorAll('details.input-section[open]').forEach(d => {
+				if (d !== target && !d.hasAttribute('data-immune')) {
+					(d as HTMLDetailsElement).open = false;
+				}
+			});
+		}
+		accordionGuard = false;
+	}
 </script>
 
 <div class="manhattan-layout">
@@ -406,7 +468,7 @@
 			{/if}
 		</div>
 		<div class="hb-sidebar-footer">
-			Cache: R23
+			Cache: Z84
 		</div>
 	</div>
 
@@ -467,29 +529,30 @@
 							</div>
 							<div class="block-content" style="border-left: 2px solid {blockColor(block.type)};">
 								{#if block.systemPrompt || block.userContent}
-									<details open class="input-section">
+									<details class="input-section" ontoggle={handleAccordion}>
 										<summary class="input-summary">Input</summary>
-										{#if block.systemPrompt}
-											<pre class="block-input">{block.systemPrompt}</pre>
-											{#if block.userContent}<hr class="input-separator" />{/if}
-										{/if}
-										{#if block.userContent}
-											<pre class="block-input">{block.userContent}</pre>
-										{/if}
+										{#each splitSections(renderMd((block.systemPrompt ?? '') + (block.userContent ? '\n\n' + block.userContent : ''))) as section}
+											<details class="module-section" ontoggle={handleModuleAccordion}>
+												<summary class="module-summary">{@html section.title}</summary>
+												<div class="rendered-md module-content">
+													{@html section.content}
+												</div>
+											</details>
+										{/each}
 									</details>
 								{/if}
-								<details open class="input-section">
+								<details class="input-section" open={isDialogueOutput(block.type)} data-immune={isDialogueOutput(block.type) ? '' : undefined} ontoggle={handleAccordion}>
 									<summary class="input-summary">Output</summary>
 									{#if isJson(block.type)}
 										<pre class="block-json">{block.content}</pre>
+									{:else if block.type === 'klara'}
+										{#each block.content.split(/\n\n(?=\[WIRING\]|\[MESSAGES\])/) as segment}
+											<p class="block-text" style="color: {blockColor(block.type)};">{segment}</p>
+										{/each}
 									{:else}
-										{#if block.type === 'klara'}
-											{#each block.content.split(/\n\n(?=\[WIRING\]|\[MESSAGES\])/) as segment}
-												<p class="block-text" style="color: {blockColor(block.type)};">{segment}</p>
-											{/each}
-										{:else}
-											<p class="block-text" style="color: {blockColor(block.type)};">{block.content}</p>
-										{/if}
+										<div class="rendered-md output-md">
+											{@html renderMd(block.content)}
+										</div>
 									{/if}
 								</details>
 							</div>
@@ -506,7 +569,7 @@
 		display: flex;
 		height: 100vh;
 		background: var(--color-bg, #0b0d10);
-		font-family: 'iA Writer Quattro V', 'iA Writer Quattro S', monospace;
+		font-family: 'JetBrains Mono', monospace;
 	}
 
 	/* --- Main area --- */
@@ -642,12 +705,13 @@
 
 	.block-label {
 		font-size: 10px;
-		font-weight: bold;
+		font-weight: 700;
 		text-transform: uppercase;
-		letter-spacing: 0.5px;
+		letter-spacing: 0.8px;
 		padding-top: 0;
 		text-align: right;
 		line-height: 1.6;
+		opacity: 0.9;
 	}
 
 	.block-content {
@@ -655,20 +719,21 @@
 	}
 
 	.block-text {
-		font-size: 13px;
-		line-height: 1.6;
+		font-size: 11px;
+		line-height: 1.5;
 		margin: 0;
 		opacity: 0.85;
+		color: #888;
 	}
 
 	.block-json {
 		font-size: 11px;
 		line-height: 1.5;
-		color: #888;
+		color: #777;
 		margin: 0;
 		white-space: pre-wrap;
 		overflow-wrap: break-word;
-		opacity: 0.7;
+		opacity: 0.85;
 	}
 
 	.input-section {
@@ -677,12 +742,22 @@
 
 	.input-summary {
 		cursor: pointer;
-		font-size: 10px;
+		font-size: 11px;
+		font-weight: 600;
 		text-transform: uppercase;
-		letter-spacing: 0.5px;
-		color: #666;
+		letter-spacing: 1px;
+		color: #777;
 		user-select: none;
-		padding: 4px 0;
+		padding: 6px 10px;
+		background: rgba(255, 255, 255, 0.03);
+		border-radius: 3px;
+		border-left: 3px solid #444;
+		margin-bottom: 4px;
+	}
+
+	.input-summary:hover {
+		background: rgba(255, 255, 255, 0.06);
+		color: #999;
 	}
 
 	.input-separator {
@@ -691,14 +766,140 @@
 		margin: 8px 0;
 	}
 
-	.block-input {
+	.module-section {
+		margin: 2px 0;
+		margin-left: 8px;
+	}
+
+	.module-summary {
+		cursor: pointer;
+		font-size: 11px;
+		font-weight: 600;
+		color: #7a9aad;
+		user-select: none;
+		padding: 4px 8px;
+		border-left: 2px solid #333;
+		margin-bottom: 2px;
+	}
+
+	.module-summary:hover {
+		color: #9ab4c4;
+		border-left-color: #555;
+	}
+
+	.module-content {
+		padding-left: 12px;
+	}
+
+	.rendered-md {
 		font-size: 11px;
 		line-height: 1.5;
-		color: #777;
+		color: #888;
 		margin: 4px 0 0 0;
-		white-space: pre-wrap;
 		overflow-wrap: break-word;
-		opacity: 0.7;
+		opacity: 0.85;
+	}
+
+	.rendered-md :global(h1) {
+		font-size: 13px;
+		font-weight: 700;
+		color: #a89060;
+		margin: 16px 0 6px 0;
+		padding-bottom: 3px;
+		border-bottom: 1px solid #2a2a2a;
+	}
+
+	.rendered-md :global(h2) {
+		font-size: 12px;
+		font-weight: 700;
+		color: #7a9aad;
+		margin: 14px 0 5px 0;
+		padding-bottom: 2px;
+		border-bottom: 1px solid #222;
+	}
+
+	.rendered-md :global(h3) {
+		font-size: 11px;
+		font-weight: 700;
+		color: #888;
+		margin: 10px 0 3px 0;
+	}
+
+	.rendered-md :global(h4),
+	.rendered-md :global(h5),
+	.rendered-md :global(h6) {
+		font-size: 12px;
+		font-weight: 600;
+		color: #888;
+		margin: 10px 0 4px 0;
+	}
+
+	.rendered-md :global(p) {
+		margin: 6px 0;
+	}
+
+	.rendered-md :global(ul),
+	.rendered-md :global(ol) {
+		margin: 6px 0;
+		padding-left: 20px;
+	}
+
+	.rendered-md :global(li) {
+		margin: 2px 0;
+	}
+
+	.rendered-md :global(strong) {
+		color: #999;
+		font-weight: 600;
+	}
+
+	.rendered-md :global(em) {
+		font-style: italic;
+		color: #888;
+	}
+
+	.rendered-md :global(code) {
+		background: rgba(255, 255, 255, 0.06);
+		padding: 1px 4px;
+		border-radius: 3px;
+		font-size: 11px;
+	}
+
+	.rendered-md :global(pre) {
+		background: rgba(255, 255, 255, 0.04);
+		padding: 8px 10px;
+		border-radius: 4px;
+		margin: 8px 0;
+		overflow-x: auto;
+		font-size: 11px;
+		line-height: 1.4;
+	}
+
+	.rendered-md :global(pre code) {
+		background: none;
+		padding: 0;
+	}
+
+	.rendered-md :global(hr) {
+		border: none;
+		border-top: 1px solid #333;
+		margin: 12px 0;
+	}
+
+	.rendered-md :global(blockquote) {
+		border-left: 2px solid #555;
+		padding-left: 10px;
+		margin: 8px 0;
+		color: #888;
+	}
+
+	.output-md {
+		color: inherit;
+		opacity: 0.85;
+	}
+
+	.output-md :global(p) {
+		margin: 4px 0;
 	}
 
 	/* --- Klara annotation style --- */
