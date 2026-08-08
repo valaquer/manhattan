@@ -16,7 +16,7 @@ library/manhattan-app/                 # App codebase (git: valaquer/manhattan)
 │   │       ├── engine.ts             # Pipeline orchestrator: 5 agents, retry, tokens
 │   │       ├── engine.test.ts        # 20 tests
 │   │       ├── merge.ts             # Merge/parse for pipeline data (zero framework deps)
-│   │       ├── merge.test.ts        # 19 tests
+│   │       ├── merge.test.ts        # 27 tests
 │   │       ├── moderation.ts        # OpenAI Moderation API client (content classifier)
 │   │       ├── db.ts                # SQLite: messages, pipeline_outputs, memory
 │   │       └── openrouter.ts        # OpenRouter API client (callModel, streamModel)
@@ -141,8 +141,8 @@ Canon section parsing depends on exact `## CANON -- {field}` header format. Form
 ### Port-readiness constraint
 merge.ts is designed to port to Prague. Must maintain zero framework dependencies. Any change that adds a dependency breaks the port path.
 
-### Pipeline transparency (A25/A26/A27)
-+page.svelte displays full input (system_prompt + user_content merged into single "Input" section) and output for every agent in collapsible sections. DB stores system_prompt and user_content per pipeline_outputs row for historical browsing. Input sections render at full height with no inner scrolling (max-height/overflow-y removed in A27).
+### Pipeline transparency (A25-A33)
++page.svelte displays full input (system_prompt + user_content merged) and output for every agent. DB stores system_prompt and user_content per pipeline_outputs row. Rendering: `marked` library converts markdown to HTML with `<script>` tag sanitization. Input sections split at `<h2>` boundaries into nested collapsible modules (A33). Tray sections (ACCUMULATED MEMORY, RECENT TURNS, PRIOR EXTRACTIONS) use `##` headers with bold type/sender labels and `---` separators (A29). Memory entries grouped by turn number with `### Turn N` headers (A30). Transcript formatted as Marcus-Sophie pairs with `---` between turns (A31). Two-level accordion: per-turn accordion on Input/Output sections with Actor for User and Actress for Character outputs immune (A32), per-section accordion on nested modules (A33). Font: JetBrains Mono. Color scheme: muted (#888, 0.85 opacity).
 
 ### Content classifier (A16)
 moderation.ts calls OpenAI Moderation API on user messages. Returns filtered category flags (8 criminal-statute-mapped categories, `sexual` suppressed). Flags are advisory input to Director tray item 12. Graceful degradation: returns null on missing key or API failure.
